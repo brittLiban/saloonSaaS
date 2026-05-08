@@ -20,6 +20,10 @@ function fmtDuration(mins: number) {
 function fmt12(date: Date) {
   return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
+function petEmoji(species: string) {
+  const s = species.toLowerCase();
+  return s === "dog" ? "🐶" : s === "cat" ? "🐈" : "🐾";
+}
 
 export default async function TodayPage() {
   const ctx = await getTenantCtx();
