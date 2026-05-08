@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
-import { StatusChanger } from "@/components/StatusChanger";
+import { TodayApptRow } from "@/components/TodayApptRow";
 import { TopbarSearch } from "@/components/TopbarSearch";
 
 function fmtMoney(cents: number) {
@@ -21,21 +21,6 @@ function fmt12(date: Date) {
   return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
-function petEmoji(species: string) {
-  const s = species.toLowerCase();
-  return s === "dog" ? "🐶" : s === "cat" ? "🐈" : "🐾";
-}
-
-function statusDisplay(status: string): { label: string; dot: string; bg: string; color: string } {
-  switch (status) {
-    case "COMPLETED": return { label: "Done",     dot: "●", bg: "#dcfce7", color: "#166534" };
-    case "READY":     return { label: "Ready",    dot: "●", bg: "#dcfce7", color: "#166534" };
-    case "IN_PROGRESS":
-    case "CHECKED_IN":return { label: "In chair", dot: "●", bg: "#ffedd5", color: "var(--acc)" };
-    default:          return { label: "Upcoming", dot: "○", bg: "#f3f4f6", color: "#6b7280" };
-  }
-}
-
 export default async function TodayPage() {
   const ctx = await getTenantCtx();
   if (!ctx) redirect("/login");
@@ -51,7 +36,11 @@ export default async function TodayPage() {
   const [appointments, lastWeekAppts, rebookCandidates] = await Promise.all([
     db.appointment.findMany({
       where:   { tenantId: ctx.tenantId, startsAt: { gte: dayStart, lte: dayEnd } },
-      include: { animal: true, client: true, service: true },
+      include: {
+        animal: { select: { id: true, name: true, species: true, breed: true } },
+        client: { select: { id: true, name: true } },
+        service: { select: { name: true, durationMinutes: true, description: true } },
+      },
       orderBy: { startsAt: "asc" },
     }),
     db.appointment.findMany({
@@ -183,78 +172,13 @@ export default async function TodayPage() {
               </Link>
             </div>
           ) : (
-            active.map((appt, idx) => {
-              const start    = new Date(appt.startsAt);
-              const end      = new Date(start.getTime() + appt.service.durationMinutes * 60_000);
-              const s        = statusDisplay(appt.status);
-              const isLast   = idx === active.length - 1;
-
-              return (
-                <div
-                  key={appt.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "80px 48px 1fr auto",
-                    alignItems: "center",
-                    gap: 14,
-                    padding: "18px 22px",
-                    borderBottom: isLast ? "none" : "1px solid var(--d-line)",
-                  }}
-                >
-                  {/* Time */}
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--d-ink)", fontFamily: "var(--dash-mono)" }}>
-                      {fmt12(start)}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--d-ink-4)", fontFamily: "var(--dash-mono)", marginTop: 2 }}>
-                      {fmt12(end)}
-                    </div>
-                  </div>
-
-                  {/* Avatar */}
-                  <div style={{
-                    width: 40, height: 40, borderRadius: "50%",
-                    background: "#fef3e8", border: "1.5px solid var(--d-line-2)",
-                    display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0,
-                  }}>
-                    {petEmoji(appt.animal.species)}
-                  </div>
-
-                  {/* Name + details */}
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--d-ink)", marginBottom: 2 }}>
-                      {appt.animal.name}
-                    </div>
-                    <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
-                      {appt.client.name}
-                      {appt.animal.breed ? ` · ${appt.animal.breed}` : ""}
-                    </div>
-                  </div>
-
-                  {/* Right: service + status + price + action */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "flex-end" }}>
-                    <div style={{ fontSize: 13, color: "var(--d-ink-3)", whiteSpace: "nowrap" }}>
-                      {appt.service.name}
-                    </div>
-
-                    <div style={{
-                      display: "inline-flex", alignItems: "center", gap: 5,
-                      padding: "4px 11px", borderRadius: 999,
-                      background: s.bg, color: s.color,
-                      fontSize: 12, fontWeight: 600, whiteSpace: "nowrap",
-                    }}>
-                      <span>{s.dot}</span> {s.label}
-                    </div>
-
-                    <StatusChanger appointmentId={appt.id} status={appt.status} />
-
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--d-ink)", fontFamily: "var(--dash-mono)", minWidth: 46, textAlign: "right" }}>
-                      {fmtMoney(appt.priceCents)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            active.map((appt, idx) => (
+              <TodayApptRow
+                key={appt.id}
+                appt={appt}
+                isLast={idx === active.length - 1}
+              />
+            ))
           )}
         </div>
 
