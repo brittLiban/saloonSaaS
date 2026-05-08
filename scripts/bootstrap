@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "Created .env from .env.example. Review secrets before production use."
+fi
+
+npm install
+npm run prisma:generate
+echo "Bootstrap complete. Use 'docker compose up -d' for the self-contained stack."

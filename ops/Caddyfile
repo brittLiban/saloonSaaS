@@ -1,0 +1,13 @@
+{
+  auto_https off
+}
+
+:80 {
+  encode gzip zstd
+
+  handle_path /healthz {
+    respond "ok" 200
+  }
+
+  reverse_proxy web:3000
+}

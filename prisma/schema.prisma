@@ -1,0 +1,338 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole {
+  OWNER
+  MANAGER
+  STAFF
+  READONLY
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  CHECKED_IN
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentSource {
+  DASHBOARD
+  API
+  IMPORT
+  SYSTEM
+}
+
+enum NoteVisibility {
+  INTERNAL
+  CLIENT_VISIBLE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  UNPAID
+  OVERDUE
+  VOID
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model Tenant {
+  id              String              @id @default(cuid())
+  name            String
+  slug            String              @unique
+  timezone        String              @default("America/Los_Angeles")
+  address         String?
+  phone           String?
+  email           String?
+  logoUrl         String?
+  themeTokens     Json
+  businessHours   Json
+  bookingRules    Json
+  subscription    Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  memberships     Membership[]
+  clients         Client[]
+  animals         Animal[]
+  services        Service[]
+  appointments    Appointment[]
+  availability    AvailabilityBlock[]
+  notes           GroomingNote[]
+  invoices        Invoice[]
+  apiKeys         ApiKey[]
+  webhookEndpoints WebhookEndpoint[]
+  auditLogs       AuditLog[]
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+  authoredNotes GroomingNote[] @relation("NoteAuthor")
+  auditLogs    AuditLog[]
+}
+
+model Membership {
+  id        String         @id @default(cuid())
+  tenantId  String
+  userId    String
+  role      MembershipRole
+  createdAt DateTime       @default(now())
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+}
+
+model Client {
+  id          String       @id @default(cuid())
+  tenantId    String
+  name        String
+  phone       String?
+  email       String?
+  address     String?
+  tier        String       @default("Regular")
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  animals     Animal[]
+  appointments Appointment[]
+  notesFeed   GroomingNote[]
+  invoices    Invoice[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
+}
+
+model Animal {
+  id             String       @id @default(cuid())
+  tenantId       String
+  clientId       String
+  name           String
+  species        String
+  breed          String?
+  sex            String?
+  dateOfBirth    DateTime?
+  weightLbs      Decimal?     @db.Decimal(6, 2)
+  allergies      String[]      @default([])
+  behaviorFlags  String[]      @default([])
+  preferredCadenceDays Int?
+  lastVisitAt    DateTime?
+  careSummary    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client         Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointments   Appointment[]
+  notes          GroomingNote[]
+  invoices       Invoice[]
+
+  @@index([tenantId, name])
+  @@index([tenantId, clientId])
+}
+
+model Service {
+  id               String        @id @default(cuid())
+  tenantId         String
+  name             String
+  description      String?
+  durationMinutes  Int
+  bufferBeforeMinutes Int       @default(0)
+  bufferAfterMinutes  Int       @default(0)
+  priceCents       Int
+  active           Boolean       @default(true)
+  species          String?
+  sizeRules        Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments     Appointment[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, active])
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  tenantId       String
+  clientId       String
+  animalId       String
+  serviceId      String
+  staffUserId    String?
+  startsAt       DateTime
+  endsAt         DateTime
+  status         AppointmentStatus @default(CONFIRMED)
+  source         AppointmentSource @default(DASHBOARD)
+  priceCents     Int
+  cancellationReason String?
+  rescheduleReason   String?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client         Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  animal         Animal            @relation(fields: [animalId], references: [id], onDelete: Restrict)
+  service        Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  notes          GroomingNote[]
+  invoices       Invoice[]
+
+  @@index([tenantId, startsAt])
+  @@index([tenantId, status])
+  @@index([tenantId, animalId])
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(cuid())
+  tenantId  String
+  staffUserId String?
+  label     String
+  startsAt  DateTime
+  endsAt    DateTime
+  type      String   @default("blocked")
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, startsAt, endsAt])
+}
+
+model GroomingNote {
+  id          String         @id @default(cuid())
+  tenantId    String
+  clientId    String?
+  animalId    String?
+  appointmentId String?
+  authorUserId String?
+  tag         String         @default("general")
+  body        String
+  visibility  NoteVisibility @default(INTERNAL)
+  attachments Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client      Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  animal      Animal?        @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  appointment Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  author      User?          @relation("NoteAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, animalId])
+  @@index([tenantId, clientId])
+}
+
+model Invoice {
+  id           String        @id @default(cuid())
+  tenantId     String
+  clientId     String
+  animalId     String?
+  appointmentId String?
+  number       String
+  status       InvoiceStatus @default(DRAFT)
+  lineItems    Json
+  subtotalCents Int
+  taxCents     Int           @default(0)
+  totalCents   Int
+  externalPaymentRef String?
+  issuedAt     DateTime?
+  dueAt        DateTime?
+  paidAt       DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  animal       Animal?       @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  appointment  Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  prefix      String   @unique
+  hashedSecret String
+  scopes      String[] @default([])
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model WebhookEndpoint {
+  id          String   @id @default(cuid())
+  tenantId    String
+  url         String
+  description String?
+  events      String[] @default([])
+  signingSecretHash String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries  WebhookDelivery[]
+
+  @@index([tenantId, active])
+}
+
+model WebhookDelivery {
+  id          String                @id @default(cuid())
+  endpointId  String
+  event       String
+  payload     Json
+  status      WebhookDeliveryStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  nextAttemptAt DateTime?
+  responseStatus Int?
+  responseBody String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  endpoint    WebhookEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, status])
+  @@index([nextAttemptAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  actorUserId String?
+  source      String
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+}
