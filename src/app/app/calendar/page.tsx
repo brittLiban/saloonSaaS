@@ -5,8 +5,8 @@ import { CalendarNav } from "@/components/CalendarNav";
 
 /* ── visual constants ─────────────────────────── */
 const HOUR_START  = 8;    // 8 AM
-const HOUR_END    = 18;   // 6 PM  (10 hours — fits one screen without scroll)
-const PX_PER_HOUR = 72;   // pixels per hour → 1.2 px/min
+const HOUR_END    = 19;   // 7 PM  (11 hours — covers all business hours)
+const PX_PER_HOUR = 64;   // pixels per hour → 1.067 px/min
 const PX_PER_MIN  = PX_PER_HOUR / 60;
 
 /* ── per-animal colour palette — vibrant pastels matching prototype */
