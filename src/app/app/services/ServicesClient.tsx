@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { upsertService, toggleServiceActive } from "@/server/actions/services";
+import { TopbarSearch } from "@/components/TopbarSearch";
 
 type Service = {
   id: string;
@@ -16,22 +18,31 @@ type Service = {
   species: string | null;
 };
 
-function fmtMoney(cents: number) {
-  return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+function fmtPrice(cents: number) {
+  const dollars = cents / 100;
+  return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`;
 }
 
 function fmtDuration(mins: number) {
-  if (mins < 60) return `${mins}m`;
+  if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return m > 0 ? `${h}h ${m} min` : `${h}h`;
 }
 
-export function ServicesClient({ services: initial }: { services: Service[] }) {
+export function ServicesClient({
+  services: initial,
+  monthlyCountMap,
+  tenantName,
+}: {
+  services: Service[];
+  monthlyCountMap: Record<string, number>;
+  tenantName: string;
+}) {
   const router = useRouter();
   const [services, setServices] = useState(initial);
   const [editTarget, setEditTarget] = useState<Service | "new" | null>(null);
-  const [togglePending, startToggle] = useTransition();
+  const [, startToggle] = useTransition();
 
   function handleToggle(svc: Service) {
     const next = !svc.active;
@@ -46,97 +57,147 @@ export function ServicesClient({ services: initial }: { services: Service[] }) {
     router.refresh();
   }
 
+  const activeServices = services.filter((s) => s.active);
+
   return (
     <>
       <header className="topbar">
         <div className="topbar-left">
+          <div className="topbar-breadcrumb">{tenantName} / Services</div>
           <div className="topbar-title">Services</div>
-          <div className="topbar-sub">
-            {services.filter((s) => s.active).length} active services
-          </div>
+          <div className="topbar-sub">Menu &amp; pricing</div>
+        </div>
+        <div className="topbar-center">
+          <TopbarSearch />
         </div>
         <div className="topbar-actions">
-          <button className="d-btn d-btn-primary" type="button" onClick={() => setEditTarget("new")}>
-            + New service
+          <button className="topbar-bell" type="button" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span className="topbar-bell-dot" />
           </button>
+          <Link href="/app/calendar" className="d-btn d-btn-primary">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New booking
+          </Link>
         </div>
       </header>
 
-      <div className="dash-content">
-        <div className="glass-card" style={{ overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--d-line)" }}>
-                {["Service", "Duration", "Price", "Species", "Status", ""].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: "10px 16px",
-                      textAlign: "left",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.07em",
-                      color: "var(--d-ink-3)",
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {services.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ padding: "48px 20px", textAlign: "center", color: "var(--d-ink-3)" }}>
-                    No services yet. Add your first service to start booking.
-                  </td>
-                </tr>
-              )}
-              {services.map((svc) => (
-                <tr key={svc.id} className="table-row">
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{svc.name}</div>
-                    {svc.description && (
-                      <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginTop: 2 }}>{svc.description}</div>
-                    )}
-                  </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13 }}>{fmtDuration(svc.durationMinutes)}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, fontFamily: "var(--dash-mono)" }}>
-                    {fmtMoney(svc.priceCents)}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    {svc.species ? (
-                      <span className="pill pill-blue" style={{ fontSize: 11 }}>{svc.species}</span>
-                    ) : (
-                      <span style={{ color: "var(--d-ink-4)", fontSize: 12 }}>All</span>
-                    )}
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
+      <div className="dash-content" style={{ paddingBottom: 48 }}>
+        {activeServices.length === 0 ? (
+          <div style={{
+            background: "#fff", borderRadius: 16, border: "1px solid var(--d-line-2)",
+            padding: "48px 24px", textAlign: "center",
+          }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>✂️</div>
+            <div style={{ fontFamily: "var(--dash-serif)", fontSize: 18, color: "var(--d-ink-3)", marginBottom: 16 }}>
+              No services yet
+            </div>
+            <button className="d-btn d-btn-primary" onClick={() => setEditTarget("new")}>
+              Add your first service
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 16,
+          }}>
+            {activeServices.map((svc) => {
+              const bookingCount = monthlyCountMap[svc.id] ?? 0;
+              return (
+                <div
+                  key={svc.id}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 16,
+                    border: "1px solid var(--d-line-2)",
+                    padding: "22px 24px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 0,
+                  }}
+                >
+                  {/* Service name */}
+                  <div style={{
+                    fontSize: 17, fontWeight: 700, color: "var(--d-ink)",
+                    letterSpacing: "-0.01em", marginBottom: 12,
+                  }}>
+                    {svc.name}
+                  </div>
+
+                  {/* Price + duration */}
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
+                    <span style={{
+                      fontFamily: "var(--dash-serif)",
+                      fontSize: 38, fontWeight: 400,
+                      color: "var(--d-ink)", lineHeight: 1,
+                    }}>
+                      {fmtPrice(svc.priceCents)}
+                    </span>
+                    <span style={{ fontSize: 13, color: "var(--d-ink-4)" }}>
+                      · {fmtDuration(svc.durationMinutes)}
+                    </span>
+                  </div>
+
+                  {/* Divider */}
+                  <div style={{ borderTop: "1px solid var(--d-line)", marginBottom: 14 }} />
+
+                  {/* Footer: booking count + edit */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 13, color: "var(--d-ink-3)" }}>
+                      Booked {bookingCount}× this month
+                    </span>
                     <button
-                      onClick={() => handleToggle(svc)}
-                      disabled={togglePending}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                    >
-                      <span className={svc.active ? "pill pill-green" : "pill pill-gray"} style={{ fontSize: 11 }}>
-                        {svc.active ? "Active" : "Inactive"}
-                      </span>
-                    </button>
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <button
-                      className="d-btn"
-                      style={{ fontSize: 12, padding: "4px 10px" }}
                       onClick={() => setEditTarget(svc)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        padding: 4, color: "var(--d-ink-4)", display: "grid", placeItems: "center",
+                        borderRadius: 6,
+                        transition: "color 0.1s",
+                      }}
+                      title="Edit service"
                     >
-                      Edit
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* + New service card */}
+            <button
+              onClick={() => setEditTarget("new")}
+              style={{
+                background: "transparent",
+                borderRadius: 16,
+                border: "2px dashed var(--d-line-2)",
+                padding: "22px 24px",
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                minHeight: 160,
+                color: "var(--d-ink-4)",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>New service</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {editTarget !== null && (
@@ -202,11 +263,15 @@ function ServiceModal({
       onClick={onClose}
     >
       <div
-        className="glass-card"
-        style={{ width: 480, padding: 28, position: "relative", maxHeight: "90vh", overflowY: "auto" }}
+        style={{
+          background: "#fff", borderRadius: 18,
+          border: "1px solid var(--d-line-2)",
+          boxShadow: "0 8px 40px oklch(0.22 0.02 60 / 0.14)",
+          width: 480, padding: 28, position: "relative", maxHeight: "90vh", overflowY: "auto",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ fontFamily: "var(--dash-serif)", fontSize: 20, marginBottom: 20 }}>
+        <div style={{ fontFamily: "var(--dash-sans)", fontSize: 18, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 20 }}>
           {service ? "Edit service" : "New service"}
         </div>
 
@@ -299,7 +364,7 @@ function ServiceModal({
         </div>
 
         {error && (
-          <div style={{ marginTop: 14, padding: "10px 14px", background: "oklch(from var(--oxblood) l c h / 0.08)", borderRadius: 8, color: "var(--oxblood)", fontSize: 13 }}>
+          <div style={{ marginTop: 14, padding: "10px 14px", background: "#fff1ee", borderRadius: 8, color: "var(--acc)", fontSize: 13 }}>
             {error}
           </div>
         )}

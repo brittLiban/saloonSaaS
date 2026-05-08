@@ -7,21 +7,40 @@ export default async function ServicesPage() {
   const ctx = await getTenantCtx();
   if (!ctx) redirect("/login");
 
-  const services = await db.service.findMany({
-    where: { tenantId: ctx.tenantId },
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      durationMinutes: true,
-      bufferBeforeMinutes: true,
-      bufferAfterMinutes: true,
-      priceCents: true,
-      active: true,
-      species: true,
-    },
-  });
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  return <ServicesClient services={services} />;
+  const [services, monthlyCounts] = await Promise.all([
+    db.service.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        durationMinutes: true,
+        bufferBeforeMinutes: true,
+        bufferAfterMinutes: true,
+        priceCents: true,
+        active: true,
+        species: true,
+      },
+    }),
+    db.appointment.groupBy({
+      by: ["serviceId"],
+      where: {
+        tenantId: ctx.tenantId,
+        startsAt: { gte: monthStart, lte: monthEnd },
+        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      },
+      _count: { serviceId: true },
+    }),
+  ]);
+
+  const countMap: Record<string, number> = Object.fromEntries(
+    monthlyCounts.map((c) => [c.serviceId, c._count.serviceId])
+  );
+
+  return <ServicesClient services={services} monthlyCountMap={countMap} tenantName={ctx.name} />;
 }
