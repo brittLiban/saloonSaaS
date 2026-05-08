@@ -205,35 +205,47 @@ fi
 
 step "Proxy nginx config"
 
-# The web container joins proxy-net, so nginx can reach it by Docker name.
-# Docker Compose names the container: {project-name}-web-1
-# Project name = directory name of the compose file.
 PROJECT_NAME=$(basename "$(pwd)" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/-*$//')
 CONTAINER_NAME="${PROJECT_NAME}-web-1"
 
-if grep -q "pawreception.com" "${PROXY_NGINX_CONF}"; then
-  ok "Server block for ${DOMAIN} already exists in nginx.conf"
-else
-  info "Adding ${DOMAIN} server block to ${PROXY_NGINX_CONF}…"
+info "Writing ${DOMAIN} server block into ${PROXY_NGINX_CONF}…"
 
-  # Append before the closing brace of the http block
-  # We append to the end of the file (inside http { ... })
-  cat >> "${PROXY_NGINX_CONF}" <<NGINX
+# Use Python to safely insert the block INSIDE the http{} closing brace.
+# Also removes any previous pawreception block first so re-runs are safe.
+python3 - <<PYEOF
+import re, sys
 
-  # ── pawreception.com ────────────────────────────────────────────────────────
-  server {
+conf_path  = '${PROXY_NGINX_CONF}'
+domain     = '${DOMAIN}'
+container  = '${CONTAINER_NAME}'
+cert_dir   = '${CERT_DIR}'
+
+with open(conf_path, 'r') as f:
+    content = f.read()
+
+# Strip any existing pawreception block (handles broken previous runs)
+content = re.sub(
+    r'\n[ \t]*# ── pawreception\.com.*',
+    '',
+    content,
+    flags=re.DOTALL
+).rstrip() + '\n'
+
+server_block = f"""
+  # ── pawreception.com ─────────────────────────────────────────────────────
+  server {{
     listen 443 ssl;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name {domain} www.{domain};
 
-    ssl_certificate     ${CERT_DIR}/fullchain.pem;
-    ssl_certificate_key ${CERT_DIR}/privkey.pem;
+    ssl_certificate     {cert_dir}/fullchain.pem;
+    ssl_certificate_key {cert_dir}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
     client_max_body_size 10M;
 
-    location / {
-      proxy_pass         http://${CONTAINER_NAME}:3000;
+    location / {{
+      proxy_pass         http://{container}:3000;
       proxy_http_version 1.1;
       proxy_set_header   Upgrade \$http_upgrade;
       proxy_set_header   Connection 'upgrade';
@@ -242,12 +254,25 @@ else
       proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
       proxy_set_header   X-Forwarded-Proto https;
       proxy_read_timeout 120s;
-    }
-  }
-NGINX
+    }}
+  }}
+"""
 
-  ok "Server block added"
-fi
+# Insert before the final closing }} that ends the http{{}} block
+last_brace = content.rfind('\n}')
+if last_brace == -1:
+    print('ERROR: could not find closing }} of http block')
+    sys.exit(1)
+
+content = content[:last_brace] + server_block + '}\n'
+
+with open(conf_path, 'w') as f:
+    f.write(content)
+
+print('nginx.conf updated OK')
+PYEOF
+
+ok "Server block inserted inside http{} block"
 
 # Reload the proxy container (no restart — zero downtime for other sites)
 info "Reloading proxy Nginx…"
