@@ -1,62 +1,75 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
-import { CalendarActions } from "@/components/CalendarActions";
+import { CalendarNav } from "@/components/CalendarNav";
 
-const HOUR_START = 8;   // 8 AM
-const HOUR_END   = 19;  // 7 PM
-const PX_PER_MIN = 1.1; // pixels per minute
+/* ── visual constants ─────────────────────────── */
+const HOUR_START  = 8;    // 8 AM
+const HOUR_END    = 18;   // 6 PM  (10 hours — fits one screen without scroll)
+const PX_PER_HOUR = 72;   // pixels per hour → 1.2 px/min
+const PX_PER_MIN  = PX_PER_HOUR / 60;
 
-function serviceColor(name: string): { bg: string; border: string; text: string } {
-  const n = name.toLowerCase();
-  if (n.includes("full groom") || n.includes("groom"))
-    return { bg: "#fce7f3", border: "#f9a8d4", text: "#9d174d" };
-  if (n.includes("bath") || n.includes("brush"))
-    return { bg: "#dcfce7", border: "#86efac", text: "#166534" };
-  if (n.includes("nail") || n.includes("trim"))
-    return { bg: "#fef9c3", border: "#fde047", text: "#713f12" };
-  if (n.includes("deshed") || n.includes("de-shed"))
-    return { bg: "#dbeafe", border: "#93c5fd", text: "#1e3a8a" };
-  if (n.includes("puppy") || n.includes("kitten"))
-    return { bg: "#ede9fe", border: "#c4b5fd", text: "#4c1d95" };
-  if (n.includes("spa") || n.includes("luxury"))
-    return { bg: "#fef3c7", border: "#fcd34d", text: "#78350f" };
-  return { bg: "#ffedd5", border: "#fdba74", text: "#9a3412" };
+/* ── per-animal colour palette — vibrant pastels matching prototype */
+const PALETTE = [
+  { bg: "#ffbcbc", text: "#8B2020" },   // salmon pink
+  { bg: "#b8eec0", text: "#1a5c2e" },   // mint green
+  { bg: "#cfc8f4", text: "#4a2d9e" },   // lavender
+  { bg: "#ffe494", text: "#7a4800" },   // amber yellow
+  { bg: "#aacff4", text: "#1a3d6e" },   // sky blue
+  { bg: "#ffd4ac", text: "#7a3200" },   // peach coral
+];
+
+function animalColor(animalId: string) {
+  const hash = animalId.split("").reduce((n, c) => n + c.charCodeAt(0), 0);
+  return PALETTE[hash % PALETTE.length];
 }
 
-function petEmoji(species: string) {
-  const s = species.toLowerCase();
-  return s === "dog" ? "🐶" : s === "cat" ? "🐈" : "🐾";
+function fmt12(date: Date) {
+  return date
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    .toLowerCase()
+    .replace(" ", "");  // "9:00 am" → "9:00am"
 }
 
-export default async function CalendarPage() {
+function getWeekStart(offset: number) {
+  const now = new Date();
+  const dow  = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) {
   const ctx = await getTenantCtx();
   if (!ctx) redirect("/login");
 
-  const services = await db.service.findMany({
-    where: { tenantId: ctx.tenantId, active: true },
-    select: { id: true, name: true, durationMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
-    orderBy: { name: "asc" },
-  });
+  const params     = await searchParams;
+  const weekOffset = parseInt(params.week ?? "0", 10) || 0;
 
-  const now = new Date();
-  const dow = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
-  monday.setHours(0, 0, 0, 0);
+  const monday = getWeekStart(weekOffset);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   sunday.setHours(23, 59, 59, 999);
+
+  const services = await db.service.findMany({
+    where:   { tenantId: ctx.tenantId, active: true },
+    select:  { id: true, name: true, durationMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
+    orderBy: { name: "asc" },
+  });
 
   const appointments = await db.appointment.findMany({
     where: {
       tenantId: ctx.tenantId,
       startsAt: { gte: monday, lte: sunday },
-      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      status:   { notIn: ["CANCELLED", "NO_SHOW"] },
     },
-    include: { animal: true, client: true, service: true },
-    orderBy: { startsAt: "asc" },
+    include:  { animal: true, client: true, service: true },
+    orderBy:  { startsAt: "asc" },
   });
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -70,95 +83,126 @@ export default async function CalendarPage() {
       const ad = new Date(a.startsAt);
       return (
         ad.getFullYear() === d.getFullYear() &&
-        ad.getMonth() === d.getMonth() &&
-        ad.getDate() === d.getDate()
+        ad.getMonth()    === d.getMonth()    &&
+        ad.getDate()     === d.getDate()
       );
     })
   );
 
   const isToday = (d: Date) => {
     const t = new Date();
-    return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+    return (
+      d.getFullYear() === t.getFullYear() &&
+      d.getMonth()    === t.getMonth()    &&
+      d.getDate()     === t.getDate()
+    );
   };
 
-  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const totalMinutes = (HOUR_END - HOUR_START) * 60;
-  const gridHeight = totalMinutes * PX_PER_MIN;
+  const dayNames   = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+  const hours      = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
+  const TOP_PAD    = 20;   // breathing room so "8 AM" label isn't clipped
+  const gridH      = (HOUR_END - HOUR_START) * PX_PER_HOUR + TOP_PAD;
 
-  const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
+  /* month label for the nav (use midweek day) */
+  const midWeek    = new Date(monday);
+  midWeek.setDate(monday.getDate() + 3);
+  const monthLabel = midWeek.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const nowOffset = (nowMinutes - HOUR_START * 60) * PX_PER_MIN;
-  const showNowLine = nowMinutes >= HOUR_START * 60 && nowMinutes <= HOUR_END * 60;
+  /* now-line */
+  const now     = new Date();
+  const nowMin  = now.getHours() * 60 + now.getMinutes();
+  const nowTop  = TOP_PAD + (nowMin - HOUR_START * 60) * PX_PER_MIN;
+  const showNow = nowMin >= HOUR_START * 60 && nowMin <= HOUR_END * 60;
+
+  /* helper: pixel offset for a given hour */
+  const hourTop  = (h: number) => TOP_PAD + (h - HOUR_START) * PX_PER_HOUR;
+  const minuteTop = (totalMin: number) => TOP_PAD + (totalMin - HOUR_START * 60) * PX_PER_MIN;
 
   return (
     <>
+      {/* ── top bar ── */}
       <header className="topbar">
-        <div className="topbar-left">
-          <div className="topbar-title">Calendar</div>
-          <div className="topbar-sub">
-            Week of {monday.toLocaleDateString("en-US", { month: "long", day: "numeric" })}
-            {" – "}
-            {sunday.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-          </div>
-        </div>
-        <div className="topbar-actions">
-          <Link href="/developers#availability" className="d-btn">API availability</Link>
-          <CalendarActions services={services} />
-        </div>
+        <CalendarNav
+          weekOffset={weekOffset}
+          monthLabel={monthLabel}
+          services={services}
+        />
       </header>
 
+      {/* ── calendar card ── */}
       <div className="dash-content" style={{ paddingBottom: 40 }}>
-        <div style={{ overflowX: "auto" }}>
-          <div style={{ minWidth: 700 }}>
-            {/* Day header row */}
-            <div style={{ display: "grid", gridTemplateColumns: "52px repeat(7, 1fr)", marginBottom: 0 }}>
-              <div />
-              {days.map((day, i) => {
-                const today = isToday(day);
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      padding: "10px 8px 10px",
-                      textAlign: "center",
-                      borderBottom: `2px solid ${today ? "var(--acc)" : "var(--d-line-2)"}`,
-                    }}
-                  >
+        <div style={{
+          background: "#fff",
+          borderRadius: 18,
+          border: "1px solid var(--d-line-2)",
+          boxShadow: "0 1px 3px oklch(0.22 0.02 60 / 0.06)",
+          overflow: "hidden",
+        }}>
+
+          {/* Day header row */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "56px repeat(7, 1fr)",
+            borderBottom: "1px solid var(--d-line)",
+          }}>
+            <div /> {/* time gutter */}
+            {days.map((day, i) => {
+              const today = isToday(day);
+              return (
+                <div
+                  key={i}
+                  style={{
+                    padding: "14px 0 12px",
+                    textAlign: "center",
+                    borderLeft: i === 0 ? "none" : "1px solid var(--d-line)",
+                  }}
+                >
+                  <div style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: "0.09em",
+                    color: today ? "var(--acc)" : "var(--d-ink-3)",
+                    marginBottom: 6,
+                  }}>
+                    {dayNames[i]}
+                  </div>
+                  {today ? (
                     <div style={{
-                      fontSize: 11, fontWeight: 700, textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      color: today ? "var(--acc)" : "var(--d-ink-3)",
-                    }}>
-                      {dayNames[i]}
-                    </div>
-                    <div style={{
-                      fontSize: 22, fontFamily: "var(--dash-serif)", fontWeight: 400,
-                      lineHeight: 1.2,
-                      color: today ? "var(--acc)" : "var(--d-ink)",
+                      width: 36, height: 36, borderRadius: "50%",
+                      background: "var(--acc)", color: "#fff",
+                      fontFamily: "var(--dash-serif)", fontSize: 20, fontWeight: 400,
+                      display: "grid", placeItems: "center", margin: "0 auto",
                     }}>
                       {day.getDate()}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  ) : (
+                    <div style={{
+                      fontFamily: "var(--dash-serif)", fontSize: 24, fontWeight: 400,
+                      color: "var(--d-ink)", lineHeight: 1,
+                    }}>
+                      {day.getDate()}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-            {/* Time grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "52px repeat(7, 1fr)", position: "relative" }}>
-              {/* Hour labels */}
-              <div style={{ position: "relative", height: gridHeight }}>
+          {/* Grid — no scroll, fits the screen */}
+          <div>
+            <div style={{ display: "grid", gridTemplateColumns: "56px repeat(7, 1fr)", position: "relative" }}>
+
+              {/* Hour label gutter */}
+              <div style={{ position: "relative", height: gridH }}>
                 {hours.map((h) => (
                   <div
                     key={h}
                     style={{
                       position: "absolute",
-                      top: (h - HOUR_START) * 60 * PX_PER_MIN - 7,
-                      right: 8,
-                      fontSize: 10,
-                      fontWeight: 600,
+                      top: hourTop(h) - 13,
+                      right: 10, left: 0,
+                      textAlign: "right",
+                      fontSize: 11, fontWeight: 600,
                       color: "var(--d-ink-4)",
-                      whiteSpace: "nowrap",
+                      lineHeight: 1,
                     }}
                   >
                     {h === 12 ? "12 PM" : h > 12 ? `${h - 12} PM` : `${h} AM`}
@@ -168,16 +212,17 @@ export default async function CalendarPage() {
 
               {/* Day columns */}
               {days.map((day, i) => {
-                const today = isToday(day);
+                const today   = isToday(day);
                 const dayAppts = apptsByDay[i];
+
                 return (
                   <div
                     key={i}
                     style={{
                       position: "relative",
-                      height: gridHeight,
+                      height: gridH,
                       borderLeft: "1px solid var(--d-line)",
-                      background: today ? "oklch(from var(--acc) 0.97 0.02 60 / 0.4)" : "transparent",
+                      background: today ? "rgba(255,90,31,0.03)" : "transparent",
                     }}
                   >
                     {/* Hour grid lines */}
@@ -186,121 +231,108 @@ export default async function CalendarPage() {
                         key={h}
                         style={{
                           position: "absolute",
-                          top: (h - HOUR_START) * 60 * PX_PER_MIN,
+                          top: hourTop(h),
                           left: 0, right: 0,
                           borderTop: "1px solid var(--d-line)",
                         }}
                       />
                     ))}
-                    {/* Half-hour grid lines */}
+
+                    {/* Half-hour lines (dashed, lighter) */}
                     {hours.map((h) => (
                       <div
-                        key={`${h}-half`}
+                        key={`${h}h`}
                         style={{
                           position: "absolute",
-                          top: (h - HOUR_START) * 60 * PX_PER_MIN + 30 * PX_PER_MIN,
+                          top: hourTop(h) + PX_PER_HOUR / 2,
                           left: 0, right: 0,
                           borderTop: "1px dashed var(--d-line)",
-                          opacity: 0.6,
+                          opacity: 0.5,
                         }}
                       />
                     ))}
 
-                    {/* Now line */}
-                    {today && showNowLine && (
-                      <div style={{
-                        position: "absolute",
-                        top: nowOffset,
-                        left: 0, right: 0,
-                        borderTop: "2px solid var(--acc)",
-                        zIndex: 3,
-                      }}>
+                    {/* Current time line */}
+                    {today && showNow && (
+                      <div style={{ position: "absolute", top: nowTop, left: 0, right: 0, zIndex: 4 }}>
                         <div style={{
                           position: "absolute", left: -4, top: -4,
                           width: 8, height: 8, borderRadius: "50%",
                           background: "var(--acc)",
                         }} />
+                        <div style={{ borderTop: "2px solid var(--acc)", marginLeft: 0 }} />
                       </div>
                     )}
 
-                    {/* Appointments */}
+                    {/* Appointment blocks */}
                     {dayAppts.map((a) => {
-                      const startMin = new Date(a.startsAt).getHours() * 60 + new Date(a.startsAt).getMinutes();
-                      const dur = a.service.durationMinutes ?? 60;
-                      const top = (startMin - HOUR_START * 60) * PX_PER_MIN;
-                      const height = Math.max(dur * PX_PER_MIN, 28);
-                      const colors = serviceColor(a.service.name);
-                      const timeStr = new Date(a.startsAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+                      const start    = new Date(a.startsAt);
+                      const startMin = start.getHours() * 60 + start.getMinutes();
+                      const dur      = a.service.durationMinutes ?? 60;
+                      const end      = new Date(start.getTime() + dur * 60_000);
+
+                      const top    = minuteTop(startMin);
+                      const height = Math.max(dur * PX_PER_MIN - 3, 28);
+
+                      const color     = animalColor(a.animal.id);
+                      const timeLabel = `${fmt12(start)} · ${fmt12(end)}`;
 
                       return (
                         <div
                           key={a.id}
                           style={{
                             position: "absolute",
-                            top, left: 3, right: 3,
+                            top: top + 2,
+                            left: 3, right: 3,
                             height,
-                            background: colors.bg,
-                            border: `1.5px solid ${colors.border}`,
-                            borderRadius: 8,
-                            padding: "4px 7px",
+                            background: color.bg,
+                            borderRadius: 14,
+                            padding: "7px 10px",
                             overflow: "hidden",
                             zIndex: 2,
                             cursor: "pointer",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
                           }}
                         >
-                          <div style={{ fontSize: 10, fontFamily: "var(--dash-mono)", color: colors.text, opacity: 0.75, lineHeight: 1.2 }}>
-                            {timeStr}
+                          {/* Time range — small, slightly muted */}
+                          <div style={{
+                            fontSize: 10, fontWeight: 600,
+                            color: color.text, opacity: 0.72,
+                            lineHeight: 1.4, marginBottom: 1,
+                            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                          }}>
+                            {timeLabel}
                           </div>
-                          {height > 36 && (
-                            <div style={{ fontSize: 11, fontWeight: 700, color: colors.text, lineHeight: 1.3, marginTop: 1 }}>
-                              {petEmoji(a.animal.species)} {a.animal.name}
+
+                          {/* Animal name — bold, prominent */}
+                          {height > 38 && (
+                            <div style={{
+                              fontSize: 14, fontWeight: 800, color: color.text,
+                              lineHeight: 1.2, marginBottom: 1,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            }}>
+                              {a.animal.name}
                             </div>
                           )}
-                          {height > 52 && (
-                            <div style={{ fontSize: 10, color: colors.text, opacity: 0.8, lineHeight: 1.2 }}>
+
+                          {/* Service — smaller, slightly muted */}
+                          {height > 58 && (
+                            <div style={{
+                              fontSize: 11.5, color: color.text, opacity: 0.82,
+                              lineHeight: 1.3,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            }}>
                               {a.service.name}
                             </div>
                           )}
                         </div>
                       );
                     })}
-
-                    {/* Empty state */}
-                    {dayAppts.length === 0 && (
-                      <div style={{
-                        position: "absolute", top: "50%", left: 0, right: 0,
-                        transform: "translateY(-50%)",
-                        textAlign: "center", fontSize: 11,
-                        color: "var(--d-ink-4)", fontStyle: "italic",
-                      }}>
-                        Free
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
           </div>
-        </div>
-
-        {/* Legend */}
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16, padding: "12px 0" }}>
-          {[
-            { label: "Full Groom", bg: "#fce7f3", border: "#f9a8d4", text: "#9d174d" },
-            { label: "Bath & Brush", bg: "#dcfce7", border: "#86efac", text: "#166534" },
-            { label: "Nail Trim", bg: "#fef9c3", border: "#fde047", text: "#713f12" },
-            { label: "Deshedding", bg: "#dbeafe", border: "#93c5fd", text: "#1e3a8a" },
-            { label: "Puppy/Kitten", bg: "#ede9fe", border: "#c4b5fd", text: "#4c1d95" },
-            { label: "Other", bg: "#ffedd5", border: "#fdba74", text: "#9a3412" },
-          ].map((l) => (
-            <div key={l.label} style={{
-              display: "flex", alignItems: "center", gap: 5,
-              fontSize: 11, color: l.text,
-            }}>
-              <div style={{ width: 10, height: 10, borderRadius: 3, background: l.bg, border: `1.5px solid ${l.border}` }} />
-              {l.label}
-            </div>
-          ))}
         </div>
       </div>
     </>
