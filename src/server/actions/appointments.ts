@@ -7,19 +7,30 @@ import { db } from "@/server/db";
 import { writeAudit } from "@/lib/audit";
 
 const CreateSchema = z.object({
-  clientId: z.string().cuid(),
-  animalId: z.string().cuid(),
-  serviceId: z.string().cuid(),
+  clientId: z.string().min(1),
+  animalId: z.string().min(1),
+  serviceId: z.string().min(1),
   startsAt: z.coerce.date(),
+  force: z.boolean().optional().default(false),
 });
 
 const UpdateStatusSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().min(1),
   status: z.enum(["CONFIRMED", "CHECKED_IN", "IN_PROGRESS", "READY", "COMPLETED", "CANCELLED", "NO_SHOW"]),
   reason: z.string().optional(),
 });
 
-export async function createAppointment(raw: unknown) {
+function fmtTime(d: Date) {
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+export type ConflictInfo = {
+  animalName: string;
+  serviceName: string;
+  startsAt: string;
+};
+
+export async function createAppointment(raw: unknown): Promise<{ ok: true } | { ok: false; conflicts: ConflictInfo[] }> {
   const ctx = await requireTenantCtx();
   const data = CreateSchema.parse(raw);
 
@@ -28,6 +39,40 @@ export async function createAppointment(raw: unknown) {
   });
 
   const endsAt = new Date(data.startsAt.getTime() + service.durationMinutes * 60_000);
+
+  // Effective blocked window including this service's buffers
+  const effectiveStart = new Date(data.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
+  const effectiveEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
+
+  if (!data.force) {
+    // Check for any appointments that overlap with our effective window
+    const conflicts = await db.appointment.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        status: { notIn: ["CANCELLED", "NO_SHOW"] },
+        AND: [
+          { startsAt: { lt: effectiveEnd } },
+          { endsAt: { gt: effectiveStart } },
+        ],
+      },
+      select: {
+        startsAt: true,
+        animal: { select: { name: true } },
+        service: { select: { name: true } },
+      },
+    });
+
+    if (conflicts.length > 0) {
+      return {
+        ok: false,
+        conflicts: conflicts.map((c) => ({
+          animalName: c.animal.name,
+          serviceName: c.service.name,
+          startsAt: fmtTime(c.startsAt),
+        })),
+      };
+    }
+  }
 
   await db.appointment.create({
     data: {
@@ -47,6 +92,8 @@ export async function createAppointment(raw: unknown) {
   revalidatePath("/app/calendar");
   revalidatePath("/app/bookings");
   await writeAudit({ tenantId: ctx.tenantId, actorUserId: ctx.userId, source: "DASHBOARD", action: "appointment.created", entityType: "appointment" });
+
+  return { ok: true };
 }
 
 export async function updateAppointmentStatus(raw: unknown) {
@@ -62,7 +109,6 @@ export async function updateAppointmentStatus(raw: unknown) {
     data: {
       status,
       ...(status === "CANCELLED" ? { cancellationReason: reason } : {}),
-      ...(status === "COMPLETED" ? {} : {}),
     },
   });
 

@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
+import { ClientDetailActions } from "@/components/ClientDetailActions";
 
 function petEmoji(species: string) {
   const s = species.toLowerCase();
@@ -78,8 +79,15 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
         <div className="topbar-actions">
-          <button className="d-btn" type="button">Edit</button>
-          <button className="d-btn d-btn-primary" type="button">+ Booking</button>
+          <ClientDetailActions client={{
+            id: client.id,
+            name: client.name,
+            email: client.email,
+            phone: client.phone,
+            address: client.address,
+            tier: client.tier,
+            notes: client.notes,
+          }} />
         </div>
       </header>
 

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { upsertService, toggleServiceActive } from "@/server/actions/services";
 import { TopbarSearch } from "@/components/TopbarSearch";
@@ -220,6 +221,8 @@ function ServiceModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -253,21 +256,24 @@ function ServiceModal({
     });
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 1000,
-        background: "oklch(0 0 0 / 0.4)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        position: "fixed", inset: 0, zIndex: 2000,
+        background: "rgba(22, 22, 22, 0.55)",
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        padding: "72px 16px 40px", overflowY: "auto",
       }}
       onClick={onClose}
     >
       <div
         style={{
-          background: "#fff", borderRadius: 18,
-          border: "1px solid var(--d-line-2)",
-          boxShadow: "0 8px 40px oklch(0.22 0.02 60 / 0.14)",
-          width: 480, padding: 28, position: "relative", maxHeight: "90vh", overflowY: "auto",
+          background: "#fff", borderRadius: 20,
+          border: "1px solid rgba(0,0,0,0.08)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
+          width: "100%", maxWidth: 480, padding: 28, flexShrink: 0,
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -380,7 +386,8 @@ function ServiceModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

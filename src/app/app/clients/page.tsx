@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { TopbarSearch } from "@/components/TopbarSearch";
+import { NewClientButton } from "@/components/NewClientButton";
 
 function tierStyle(tier: string): { bg: string; color: string; dot: string } {
   switch (tier) {
@@ -62,6 +63,7 @@ export default async function ClientsPage({
             </svg>
             <span className="topbar-bell-dot" />
           </button>
+          <NewClientButton />
           <Link href="/app/calendar" className="d-btn d-btn-primary">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>

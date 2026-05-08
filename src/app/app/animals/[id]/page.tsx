@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
+import { AnimalDetailActions } from "@/components/AnimalDetailActions";
 
 function petEmoji(species: string) {
   const s = species.toLowerCase();
@@ -92,8 +93,20 @@ export default async function AnimalDetailPage({ params }: { params: Promise<{ i
           </div>
         </div>
         <div className="topbar-actions">
-          <button className="d-btn" type="button">Edit</button>
-          <button className="d-btn d-btn-primary" type="button">+ Booking</button>
+          <AnimalDetailActions animal={{
+            id: animal.id,
+            clientId: animal.clientId,
+            name: animal.name,
+            species: animal.species,
+            breed: animal.breed,
+            sex: animal.sex,
+            dateOfBirth: animal.dateOfBirth,
+            weightLbs: animal.weightLbs ? Number(animal.weightLbs) : null,
+            allergies: animal.allergies,
+            behaviorFlags: animal.behaviorFlags,
+            preferredCadenceDays: animal.preferredCadenceDays,
+            careSummary: animal.careSummary,
+          }} />
         </div>
       </header>
 

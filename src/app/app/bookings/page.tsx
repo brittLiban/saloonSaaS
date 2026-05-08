@@ -126,7 +126,7 @@ export default async function BookingsPage({
     }),
     db.service.findMany({
       where: { tenantId: ctx.tenantId, active: true },
-      select: { id: true, name: true, durationMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
+      select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
       orderBy: { name: "asc" },
     }),
     db.appointment.count({ where: { tenantId: ctx.tenantId } }),

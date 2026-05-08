@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   fetchAvailableSlots,
   fetchClientsWithAnimals,
@@ -8,7 +9,7 @@ import {
   type SlimClient,
   type TimeSlot,
 } from "@/server/actions/booking";
-import { createAppointment } from "@/server/actions/appointments";
+import { createAppointment, type ConflictInfo } from "@/server/actions/appointments";
 
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -35,6 +36,9 @@ interface Props {
 export function BookingModal({ services, onClose, defaultDate }: Props) {
   const today = new Date().toISOString().slice(0, 10);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [step, setStep] = useState<Step>("service");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +52,7 @@ export function BookingModal({ services, onClose, defaultDate }: Props) {
   const [clientId, setClientId] = useState("");
   const [animalId, setAnimalId] = useState("");
   const [done, setDone] = useState(false);
+  const [conflicts, setConflicts] = useState<ConflictInfo[] | null>(null);
 
   const selectedService = services.find((s) => s.id === serviceId);
   const selectedClient = clients.find((c) => c.id === clientId);
@@ -74,18 +79,24 @@ export function BookingModal({ services, onClose, defaultDate }: Props) {
     });
   }
 
-  function handleConfirm() {
+  function handleConfirm(force = false) {
     if (!selectedSlot || !clientId || !animalId) return;
     setError(null);
     startTransition(async () => {
       try {
-        await createAppointment({
+        const result = await createAppointment({
           clientId,
           animalId,
           serviceId,
           startsAt: new Date(selectedSlot.startsAt),
+          force,
         });
-        setDone(true);
+        if (!result.ok) {
+          setConflicts(result.conflicts);
+        } else {
+          setConflicts(null);
+          setDone(true);
+        }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Booking failed. Please try again.");
       }
@@ -94,14 +105,16 @@ export function BookingModal({ services, onClose, defaultDate }: Props) {
 
   const stepIdx: Record<Step, number> = { service: 0, slot: 1, client: 2, confirm: 3 };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 1000, background: "oklch(0 0 0 / 0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(22, 22, 22, 0.55)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "72px 16px 40px", overflowY: "auto" }}
       onClick={onClose}
     >
       <div
         className="glass-card"
-        style={{ width: 520, maxHeight: "90vh", overflowY: "auto", padding: 28, position: "relative" }}
+        style={{ width: "100%", maxWidth: 520, padding: 28, position: "relative", flexShrink: 0 }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -197,26 +210,35 @@ export function BookingModal({ services, onClose, defaultDate }: Props) {
                 </div>
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                {slots.map((slot) => (
-                  <button
-                    key={slot.startsAt}
-                    onClick={() => handlePickSlot(slot)}
-                    disabled={isPending}
-                    style={{
-                      padding: "10px 6px", borderRadius: 8, cursor: "pointer",
-                      border: "1.5px solid var(--d-line)",
-                      background: "oklch(1 0 0 / 0.6)",
-                      fontFamily: "var(--dash-mono)", fontSize: 13, fontWeight: 600,
-                      color: "var(--d-ink)",
-                      transition: "border-color 0.15s, background 0.15s",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--oxblood)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--oxblood)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--d-line)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--d-ink)"; }}
-                  >
-                    {fmtTime(slot.startsAt)}
-                  </button>
-                ))}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, maxHeight: 360, overflowY: "auto" }}>
+                {slots.map((slot) => {
+                  const booked = !slot.available;
+                  return (
+                    <button
+                      key={slot.startsAt}
+                      onClick={() => handlePickSlot(slot)}
+                      disabled={isPending}
+                      title={booked ? "Already booked — click to book anyway" : undefined}
+                      style={{
+                        padding: booked ? "7px 6px 5px" : "10px 6px",
+                        borderRadius: 8, cursor: "pointer",
+                        border: booked ? "1.5px solid #fca5a5" : "1.5px solid var(--d-line)",
+                        background: booked ? "#fff1f0" : "oklch(1 0 0 / 0.6)",
+                        fontFamily: "var(--dash-mono)", fontSize: 13, fontWeight: 600,
+                        color: booked ? "#b91c1c" : "var(--d-ink)",
+                        transition: "border-color 0.15s, background 0.15s",
+                        display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                      }}
+                    >
+                      {fmtTime(slot.startsAt)}
+                      {booked && (
+                        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", color: "#b91c1c", opacity: 0.8 }}>
+                          BOOKED
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -306,24 +328,61 @@ export function BookingModal({ services, onClose, defaultDate }: Props) {
               ))}
             </div>
 
+            {/* Conflict warning — requires groomer confirmation */}
+            {conflicts && conflicts.length > 0 && (
+              <div style={{
+                padding: "14px 16px", marginBottom: 14,
+                background: "#fffbeb", border: "1.5px solid #f59e0b",
+                borderRadius: 10,
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#92400e", marginBottom: 6 }}>
+                  Schedule conflict detected
+                </div>
+                <div style={{ fontSize: 12, color: "#92400e", marginBottom: 10 }}>
+                  This time overlaps with:
+                  <ul style={{ margin: "6px 0 0", paddingLeft: 16 }}>
+                    {conflicts.map((c, i) => (
+                      <li key={i}><strong>{c.animalName}</strong> — {c.serviceName} at {c.startsAt}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="d-btn" style={{ fontSize: 12 }} onClick={() => setConflicts(null)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="d-btn"
+                    style={{ fontSize: 12, background: "#f59e0b", borderColor: "#f59e0b", color: "#fff" }}
+                    onClick={() => handleConfirm(true)}
+                    disabled={isPending}
+                  >
+                    {isPending ? "Booking…" : "Book anyway"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div style={{ padding: "10px 14px", background: "oklch(from var(--oxblood) l c h / 0.08)", borderRadius: 8, color: "var(--oxblood)", fontSize: 13, marginBottom: 14 }}>
                 {error}
               </div>
             )}
 
-            <button
-              className="d-btn d-btn-primary"
-              style={{ width: "100%", justifyContent: "center" }}
-              onClick={handleConfirm}
-              disabled={isPending}
-            >
-              {isPending ? "Booking…" : "Confirm booking →"}
-            </button>
+            {!conflicts && (
+              <button
+                className="d-btn d-btn-primary"
+                style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => handleConfirm(false)}
+                disabled={isPending}
+              >
+                {isPending ? "Booking…" : "Confirm booking →"}
+              </button>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
