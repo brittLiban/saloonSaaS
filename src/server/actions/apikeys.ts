@@ -4,7 +4,7 @@ import { randomBytes, createHash } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
-import { ALL_SCOPES } from "@/lib/api-scopes";
+import { ALL_SCOPES, type ApiScope } from "@/lib/api-scopes";
 
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
@@ -26,7 +26,7 @@ export async function createApiKey(
       name: name.trim(),
       prefix,
       hashedSecret: sha256(secretRaw),
-      scopes: scopes.filter((s) => ALL_SCOPES.includes(s)),
+      scopes: scopes.filter((s): s is ApiScope => (ALL_SCOPES as readonly string[]).includes(s)),
     },
   });
 
