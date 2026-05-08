@@ -22,7 +22,7 @@ RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY prisma ./prisma
 RUN npx prisma generate
-CMD ["npx", "prisma", "migrate", "deploy"]
+CMD ["npx", "prisma", "db", "push", "--accept-data-loss"]
 
 # ── Stage 4: BullMQ worker ────────────────────────────────────────────────────
 FROM node:24-alpine AS worker
