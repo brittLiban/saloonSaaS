@@ -1,20 +1,31 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getIronSession } from "iron-session/edge";
-import { sessionOptions, type SessionData } from "@/lib/session";
+import { unsealData } from "iron-session";
+import { sessionOptions } from "@/lib/session";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/app")) {
-    const response = NextResponse.next();
-    const session = await getIronSession<SessionData>(request, response, sessionOptions);
-    if (!session.userId) {
+    const cookieValue = request.cookies.get(sessionOptions.cookieName)?.value;
+    if (!cookieValue) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);
     }
-    return response;
+
+    try {
+      const session = await unsealData(cookieValue, { password: sessionOptions.password as string });
+      if (!session || !(session as Record<string, unknown>).userId) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("from", pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+    } catch {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("from", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();

@@ -1,7 +1,7 @@
 # Glasshound SaaS — Complete Implementation Reference
 
 > **AI-readable project guide.** Last updated: 2026-05-08.
-> Any AI assistant can pick up this document and continue the project from any sprint.
+> Any AI assistant can read this document and pick up the project from any sprint.
 > Follow the checklists in order. Every architectural decision is documented with its WHY.
 
 ---
@@ -14,13 +14,14 @@
 4. [File Structure](#4-file-structure)
 5. [Auth & Sessions](#5-auth--sessions)
 6. [Multi-Tenancy Rules](#6-multi-tenancy-rules)
-7. [Dashboard: Tab Specs](#7-dashboard-tab-specs)
+7. [Dashboard Tab Specs](#7-dashboard-tab-specs)
 8. [n8n REST API — Complete Spec](#8-n8n-rest-api--complete-spec)
 9. [Webhook System](#9-webhook-system)
 10. [Availability Engine](#10-availability-engine)
 11. [Docker Deployment](#11-docker-deployment)
 12. [Sprint Checklist](#12-sprint-checklist)
 13. [Seeded Demo Data](#13-seeded-demo-data)
+14. [AI Pickup Prompt](#14-ai-pickup-prompt)
 
 ---
 
@@ -64,10 +65,10 @@ Next.js 16 App Router (web container)
   │     └── /rebooking
   ├── /api/auth/*      Session auth
   ├── /api/v1/*        Public REST API (Bearer token)
-  └── /developers      API docs
+  └── /developers      Interactive API docs
 
 BullMQ Worker (worker container)
-  └── webhook delivery, reminder scheduling
+  └── webhook delivery, rebooking reminder scheduling
 
 Postgres    — Prisma ORM, all business data
 Redis       — BullMQ queues, rate limits
@@ -92,7 +93,7 @@ MinIO       — Photos, attachments, CSV imports
 
 The app uses **two CSS surfaces** — one for marketing, one for the dashboard. Both share a warm parchment base.
 
-### 3.1 Marketing Surface (`home-styles.css` reference)
+### 3.1 Marketing Surface
 
 ```css
 :root {
@@ -101,7 +102,6 @@ The app uses **two CSS surfaces** — one for marketing, one for the dashboard. 
   --surface:   #ffffff;
   --surface-2: #f7f5f1;
   --line:      #ececec;
-  --line-2:    #dedede;
 
   --ink:       #161616;
   --ink-2:     #3a3a3a;
@@ -110,113 +110,79 @@ The app uses **two CSS surfaces** — one for marketing, one for the dashboard. 
 
   --acc:       #ff5a1f;   /* orange accent — primary CTA */
   --acc-2:     #e64a0e;
-  --acc-soft:  #ffe9dd;
-  --acc-tint:  #fff4ec;
-
-  /* Pet color chips */
-  --c-blue:    #b9e3f5;
-  --c-mint:    #c5e8c8;
-  --c-yellow:  #ffe6a8;
-  --c-pink:    #f9c8c8;
-  --c-lilac:   #d8c8ec;
-  --c-coral:   #ffd0bb;
-
-  --ok:        #2f6b3a;   /* success green */
 
   --sans:    'Plus Jakarta Sans', system-ui, sans-serif;
-  --display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --serif:   'Instrument Serif', Georgia, serif;
   --mono:    'JetBrains Mono', ui-monospace, monospace;
 }
 ```
 
-### 3.2 Dashboard Surface (`pets-styles.css` reference)
+### 3.2 Dashboard Surface
 
 ```css
 :root {
-  --serif:  'Fraunces', Georgia, serif;          /* headings */
-  --sans:   'Inter Tight', system-ui, sans-serif;/* body */
-  --mono:   'JetBrains Mono', monospace;
+  /* CSS vars are prefixed --d- or --dash- in the dashboard */
+  --dash-serif:  'Fraunces', Georgia, serif;          /* headings, numbers */
+  --dash-sans:   'Inter Tight', system-ui, sans-serif;/* body */
+  --dash-mono:   'JetBrains Mono', monospace;
 
   /* Parchment light palette */
   --bg-base:  oklch(0.965 0.012 75);
   --bg-tint:  oklch(0.94  0.018 70);
   --bg-deep:  oklch(0.90  0.022 65);
 
-  --ink:   oklch(0.22 0.02 60);
-  --ink-2: oklch(0.36 0.018 60);
-  --ink-3: oklch(0.52 0.014 60);
-  --ink-4: oklch(0.70 0.010 60);
+  --d-ink:   oklch(0.22 0.02 60);
+  --d-ink-2: oklch(0.36 0.018 60);
+  --d-ink-3: oklch(0.52 0.014 60);
+  --d-ink-4: oklch(0.70 0.010 60);
 
-  --line:  oklch(0.22 0.02 60 / 0.10);
-  --line-2:oklch(0.22 0.02 60 / 0.18);
+  --d-line:  oklch(0.22 0.02 60 / 0.10);
 
-  /* Glassmorphic card style */
+  /* Glassmorphic card */
   --glass-bg:     oklch(1 0 0 / 0.55);
-  --glass-stroke: oklch(1 0 0 / 0.55);
   --glass-shadow: 0 1px 0 oklch(1 0 0 / 0.6) inset,
-                  0 12px 40px oklch(0.22 0.02 60 / 0.10),
-                  0 1px 2px  oklch(0.22 0.02 60 / 0.05);
+                  0 12px 40px oklch(0.22 0.02 60 / 0.10);
   --glass-blur:   22px;
 
   /* Accent */
   --oxblood:   oklch(0.42 0.12 25);   /* deep terracotta red */
-  --oxblood-2: oklch(0.52 0.13 25);
   --brass:     oklch(0.74 0.10 80);   /* warm gold */
   --sage:      oklch(0.62 0.07 155);  /* muted green */
 
   /* Layout */
-  --radius: 14px;
-  --radius-sm: 10px;
-  --radius-lg: 22px;
   --sidebar-w: 232px;
   --topbar-h: 64px;
 }
 ```
 
-### 3.3 Typography
-
-| Role | Font | Weight | Usage |
-|---|---|---|---|
-| Display / headings | Plus Jakarta Sans (mkt) / Fraunces (dash) | 700–800 | H1, H2, card titles |
-| Body | Plus Jakarta Sans (mkt) / Inter Tight (dash) | 400–600 | All body copy |
-| Serif emphasis | Instrument Serif (mkt) | 400 italic | `<em>` in headlines |
-| Mono | JetBrains Mono | 400–500 | Code, times, IDs |
-
-### 3.4 Component Patterns
+### 3.3 Component Patterns
 
 **Glass card (dashboard):**
 ```css
 .glass-card {
   background: var(--glass-bg);
-  border: 1px solid var(--glass-stroke);
+  border: 1px solid oklch(1 0 0 / 0.55);
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur));
-  border-radius: var(--radius-lg);
-  padding: var(--pad-card, 20px);
+  border-radius: 22px;
 }
 ```
 
-**Pill / status badge:**
-```css
-.pill { border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 700; }
-.pill-green  { background: oklch(0.62 0.07 155 / 0.15); color: oklch(0.40 0.09 155); }
-.pill-red    { background: oklch(0.42 0.12 25  / 0.12); color: var(--oxblood); }
-.pill-brass  { background: oklch(0.74 0.10 80  / 0.15); color: oklch(0.50 0.10 80);  }
-.pill-gray   { background: var(--line); color: var(--ink-3); }
-```
+**Status pill color mapping:**
 
-**Appointment status → pill color mapping:**
-| Status | Color |
+| Status | Class |
 |---|---|
-| CONFIRMED | brass |
-| CHECKED_IN | blue |
-| IN_PROGRESS | oxblood (active) |
-| READY | green |
-| COMPLETED | gray |
-| CANCELLED | red |
-| NO_SHOW | red |
-| REQUESTED | gray |
+| CONFIRMED | `pill pill-brass` |
+| CHECKED_IN | `pill pill-blue` |
+| IN_PROGRESS | `pill pill-red` |
+| READY | `pill pill-green` |
+| COMPLETED | `pill pill-gray` |
+| CANCELLED | `pill pill-red` |
+| NO_SHOW | `pill pill-red` |
+| REQUESTED | `pill pill-gray` |
+
+**Input fields:** use className `d-input` — styled in `globals.css`.
+**Buttons:** `d-btn` (ghost) and `d-btn d-btn-primary` (oxblood fill).
 
 ---
 
@@ -232,88 +198,74 @@ glasshound-saas/
 │   ├── schema.prisma       ← COMPLETE, do not modify
 │   └── seed.ts             ← Nina's Pet Salon demo data
 ├── prototypes/
-│   └── claude-design-export/   ← reference only, not in Docker build
-├── scripts/
-│   ├── bootstrap           ← first-run setup
-│   ├── seed-demo           ← re-seed demo tenant
-│   ├── backup              ← Postgres + MinIO backup
-│   └── restore             ← restore from backup
+│   └── claude-design-export/   ← reference only
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx              ← root layout, Google Fonts
-│   │   ├── globals.css             ← shared design tokens
-│   │   ├── page.tsx                ← marketing page
-│   │   ├── login/page.tsx          ← login form
+│   │   ├── layout.tsx              ← root layout (fonts via @import in globals.css)
+│   │   ├── globals.css             ← ALL design tokens + component classes
+│   │   ├── page.tsx                ← full marketing page ("use client")
+│   │   ├── login/page.tsx          ← login form (client, fetch to /api/auth/login)
 │   │   ├── register/page.tsx       ← signup + salon onboarding
-│   │   ├── developers/page.tsx     ← API docs, OpenAPI viewer
+│   │   ├── developers/page.tsx     ← interactive API docs with sidebar nav
 │   │   ├── app/
-│   │   │   ├── layout.tsx          ← dashboard shell (sidebar + topbar)
+│   │   │   ├── layout.tsx          ← dashboard shell: DashSidebar + main ("use client")
 │   │   │   ├── page.tsx            ← redirect → /app/today
-│   │   │   ├── today/page.tsx
-│   │   │   ├── calendar/page.tsx
+│   │   │   ├── today/page.tsx      ← server component (KPIs, run-of-show, alerts)
+│   │   │   ├── calendar/page.tsx   ← server component (week grid)
 │   │   │   ├── clients/
-│   │   │   │   ├── page.tsx        ← client list + search
-│   │   │   │   └── [id]/page.tsx   ← client detail
+│   │   │   │   ├── page.tsx        ← searchable client list (server)
+│   │   │   │   └── [id]/page.tsx   ← client detail (server)
 │   │   │   ├── animals/
-│   │   │   │   ├── page.tsx
-│   │   │   │   └── [id]/page.tsx
-│   │   │   ├── services/page.tsx
-│   │   │   ├── bookings/page.tsx
-│   │   │   ├── money/page.tsx
-│   │   │   ├── notes/page.tsx
-│   │   │   └── rebooking/page.tsx
+│   │   │   │   ├── page.tsx        ← card grid with allergy/behavior chips (server)
+│   │   │   │   └── [id]/page.tsx   ← animal profile (server)
+│   │   │   ├── services/page.tsx   ← static demo table + modal ("use client")
+│   │   │   ├── bookings/page.tsx   ← paginated appointment list (server)
+│   │   │   ├── money/page.tsx      ← invoice list + revenue KPIs (server)
+│   │   │   ├── notes/page.tsx      ← filterable care note feed (server)
+│   │   │   └── rebooking/page.tsx  ← overdue animals + due-this-week (server)
 │   │   └── api/
-│   │       ├── health/route.ts
+│   │       ├── health/route.ts             ← GET, pings DB
 │   │       ├── auth/
 │   │       │   ├── login/route.ts
 │   │       │   ├── logout/route.ts
 │   │       │   └── register/route.ts
 │   │       └── v1/
 │   │           ├── me/route.ts
-│   │           ├── clients/
-│   │           │   ├── route.ts
-│   │           │   └── [id]/route.ts
-│   │           ├── animals/
-│   │           │   ├── route.ts
-│   │           │   └── [id]/route.ts
-│   │           ├── services/
-│   │           │   ├── route.ts
-│   │           │   └── [id]/route.ts
-│   │           ├── appointments/
-│   │           │   ├── route.ts
-│   │           │   ├── [id]/
-│   │           │   │   ├── route.ts
-│   │           │   │   ├── cancel/route.ts
-│   │           │   │   ├── reschedule/route.ts
-│   │           │   │   └── status/route.ts
-│   │           ├── availability/route.ts
-│   │           ├── notes/route.ts
-│   │           ├── invoices/route.ts
-│   │           └── webhook-endpoints/route.ts
-│   ├── components/
-│   │   ├── BrandMark.tsx
-│   │   └── StatusPill.tsx
+│   │           ├── clients/route.ts        ← GET, POST
+│   │           ├── clients/[id]/route.ts   ← GET, PATCH, DELETE
+│   │           ├── animals/route.ts        ← GET, POST
+│   │           ├── animals/[id]/route.ts   ← GET, PATCH
+│   │           ├── services/route.ts       ← GET
+│   │           ├── appointments/route.ts   ← GET, POST (real Prisma + conflict check)
+│   │           ├── appointments/[id]/
+│   │           │   ├── route.ts            ← GET, PATCH
+│   │           │   ├── cancel/route.ts     ← POST
+│   │           │   ├── reschedule/route.ts ← POST (conflict check)
+│   │           │   └── status/route.ts     ← PATCH
+│   │           ├── availability/route.ts   ← GET (Prisma-backed, real business hours)
+│   │           ├── notes/route.ts          ← GET, POST
+│   │           ├── webhook-endpoints/route.ts ← GET, POST (HMAC signing secret)
+│   │           └── openapi/route.ts        ← GET (OpenAPI JSON)
 │   ├── domain/
-│   │   ├── availability.ts     ← COMPLETE: slot computation engine
+│   │   ├── availability.ts     ← COMPLETE — slot computation engine
 │   │   └── availability.test.ts
 │   ├── lib/
-│   │   ├── session.ts          ← iron-session config
-│   │   ├── tenant.ts           ← tenant context resolver
-│   │   ├── api-auth.ts         ← Bearer token validation
+│   │   ├── session.ts          ← iron-session config (uses SessionOptions, NOT IronSessionOptions)
+│   │   ├── tenant.ts           ← getTenantCtx() + requireTenantCtx()
+│   │   ├── api-auth.ts         ← resolveApiKey(), apiError(), requireScope(), paginate()
 │   │   ├── openapi.ts          ← OpenAPI spec generator
-│   │   ├── navigation.ts       ← dashboard tab list
-│   │   └── demo-data.ts        ← fallback demo constants
+│   │   ├── navigation.ts       ← dashboard tab definitions
+│   │   └── demo-data.ts        ← legacy fallback constants (mostly unused now)
 │   ├── server/
-│   │   ├── db.ts               ← Prisma client singleton
+│   │   ├── db.ts               ← Prisma client singleton (exports both `prisma` AND `db`)
 │   │   └── actions/
-│   │       ├── appointments.ts
-│   │       ├── clients.ts
-│   │       ├── animals.ts
-│   │       ├── services.ts
-│   │       ├── notes.ts
-│   │       └── invoices.ts
+│   │       ├── appointments.ts ← createAppointment, updateAppointmentStatus
+│   │       ├── clients.ts      ← upsertClient, deleteClient
+│   │       ├── animals.ts      ← upsertAnimal
+│   │       ├── services.ts     ← upsertService, toggleServiceActive
+│   │       └── notes.ts        ← createNote, deleteNote
 │   └── worker/
-│       └── index.ts            ← BullMQ worker (webhook delivery)
+│       └── index.ts            ← BullMQ webhook delivery + rebooking check workers
 ├── .env.example
 ├── .gitignore
 ├── Dockerfile
@@ -330,14 +282,13 @@ glasshound-saas/
 
 ### 5.1 Session library
 
-Uses **iron-session** v8 with HTTP-only signed cookies.
-
-**Package:** `iron-session`
-**Secret:** `SESSION_SECRET` env var (32+ chars, in `.env`)
+**Package:** `iron-session` v8
+**IMPORTANT:** iron-session v8 renamed `IronSessionOptions` → `SessionOptions`. Use `SessionOptions`.
+**IMPORTANT:** The `/edge` sub-path (`iron-session/edge`) no longer exists in v8. Middleware uses `unsealData` directly.
 
 ```typescript
-// src/lib/session.ts
-import { IronSessionOptions } from "iron-session";
+// src/lib/session.ts — correct v8 types
+import type { SessionOptions } from "iron-session";  // ← NOT IronSessionOptions
 
 export interface SessionData {
   userId:   string;
@@ -347,58 +298,59 @@ export interface SessionData {
   email:    string;
 }
 
-export const sessionOptions: IronSessionOptions = {
-  password: process.env.SESSION_SECRET!,
+export const sessionOptions: SessionOptions = {
+  password: process.env.SESSION_SECRET ?? "development-secret-please-change-in-production-32ch",
   cookieName: "gh_session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,  // 7 days
+    maxAge: 60 * 60 * 24 * 7,
   },
 };
 ```
 
-### 5.2 Login flow
+### 5.2 Route protection (middleware.ts)
 
-1. `POST /api/auth/login` with `{ email, password }`
-2. Look up `User` by email
-3. `bcrypt.compare(password, user.passwordHash)`
-4. Find `Membership` for the user (first one for v1 single-tenant users)
-5. Create iron-session with `{ userId, tenantId, role, name, email }`
-6. Return `{ ok: true }` — client redirects to `/app`
-
-### 5.3 Register flow
-
-1. `POST /api/auth/register` with `{ name, email, password, salonName, timezone }`
-2. Check email uniqueness
-3. Create `User` with bcrypt-hashed password (cost 12)
-4. Create `Tenant` with slug derived from salonName, default theme tokens and business hours
-5. Create `Membership` with role `OWNER`
-6. Create iron-session → redirect to `/app`
-
-### 5.4 Route protection (middleware.ts)
+Iron-session v8 no longer has an edge-compatible `getIronSession`. Use `unsealData`:
 
 ```typescript
 // src/middleware.ts
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getIronSession } from "iron-session/edge";
+import { unsealData } from "iron-session";
 import { sessionOptions } from "@/lib/session";
 
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/app")) {
-    const session = await getIronSession(request, NextResponse.next(), sessionOptions);
-    if (!session.userId) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
+    const cookieValue = request.cookies.get(sessionOptions.cookieName)?.value;
+    if (!cookieValue) return redirect("/login");
+    try {
+      const session = await unsealData(cookieValue, { password: sessionOptions.password as string });
+      if (!(session as any).userId) return redirect("/login");
+    } catch { return redirect("/login"); }
   }
   return NextResponse.next();
 }
+```
 
-export const config = {
-  matcher: ["/app/:path*"],
-};
+### 5.3 Server component session access
+
+```typescript
+// src/lib/tenant.ts — used in every server component and action
+import { cookies } from "next/headers";
+import { getIronSession } from "iron-session";  // ← fine in server context
+
+export async function getTenantCtx(): Promise<TenantCtx | null> {
+  const cookieStore = await cookies();
+  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  if (!session.userId || !session.tenantId) return null;
+  return { userId: session.userId, tenantId: session.tenantId, role: session.role, name: session.name, email: session.email };
+}
+
+export async function requireTenantCtx(): Promise<TenantCtx> {
+  const ctx = await getTenantCtx();
+  if (!ctx) throw new Error("Unauthenticated");
+  return ctx;
+}
 ```
 
 ---
@@ -408,560 +360,102 @@ export const config = {
 **CRITICAL:** Every database query must include `tenantId` from the session. Never trust client-provided tenant IDs.
 
 ```typescript
-// ✅ Correct
-const clients = await db.client.findMany({
-  where: { tenantId: session.tenantId },
-});
+// ✅ Correct — tenantId always from session
+const ctx = await getTenantCtx();
+const clients = await db.client.findMany({ where: { tenantId: ctx.tenantId } });
 
-// ❌ Wrong — never use a tenantId from the request body or query params
-const clients = await db.client.findMany({
-  where: { tenantId: req.body.tenantId },
-});
+// ❌ Wrong — never read tenantId from request body or URL
+const clients = await db.client.findMany({ where: { tenantId: req.body.tenantId } });
 ```
 
-**Tenant resolver pattern:**
-```typescript
-// src/lib/tenant.ts
-export async function getTenantContext(request: NextRequest): Promise<TenantCtx | null> {
-  const session = await getIronSession<SessionData>(request, ...);
-  if (!session.userId) return null;
-  return { tenantId: session.tenantId, userId: session.userId, role: session.role };
-}
-```
-
-**API v1 tenant resolver:**
-```typescript
-// src/lib/api-auth.ts — resolves from Bearer token
-export async function resolveApiKey(request: NextRequest): Promise<ApiCtx | null> {
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const token = auth.slice(7);
-  // token format: gh_<prefix>_<secret>
-  const parts = token.split("_");
-  if (parts.length < 3) return null;
-  const prefix = parts.slice(0, 2).join("_");  // gh_<prefix>
-  const secret = parts.slice(2).join("_");
-  const key = await db.apiKey.findUnique({ where: { prefix } });
-  if (!key || key.revokedAt || (key.expiresAt && key.expiresAt < new Date())) return null;
-  const hash = sha256(secret);
-  if (hash !== key.hashedSecret) return null;
-  return { tenantId: key.tenantId, scopes: key.scopes };
-}
-```
+**API v1 tenant resolver:** `resolveApiKey(request)` in `src/lib/api-auth.ts` — resolves tenant from Bearer token prefix/secret. The `db` singleton exports both `prisma` and `db` (same object) to support both naming conventions.
 
 **Scope enforcement pattern:**
 ```typescript
-function requireScope(ctx: ApiCtx, scope: string) {
-  if (!ctx.scopes.includes(scope)) {
-    return apiError("forbidden", `Requires scope: ${scope}`, 403);
-  }
-}
+// requireScope returns NextResponse | undefined — always check the return value
+const err = requireScope(auth, "clients:read");
+if (err) return err;
 ```
 
 ---
 
 ## 7. Dashboard Tab Specs
 
-All dashboard routes live under `/app/*` and use a shared layout (`src/app/app/layout.tsx`) that renders the sidebar + topbar.
+All routes are server components except `services/page.tsx` (client for modal state) and `layout.tsx` (client for `usePathname`).
 
-### 7.1 Sidebar navigation
+### Pattern used in every server component
 
 ```typescript
-const tabs = [
-  { key: "today",     label: "Today",     icon: "sun",      href: "/app/today" },
-  { key: "calendar",  label: "Calendar",  icon: "calendar", href: "/app/calendar" },
-  { key: "bookings",  label: "Bookings",  icon: "chart",    href: "/app/bookings" },
-  { key: "rebooking", label: "Rebooking", icon: "refresh",  href: "/app/rebooking", badge: true },
-  { key: "clients",   label: "Clients",   icon: "users",    href: "/app/clients" },
-  { key: "animals",   label: "Animals",   icon: "paw",      href: "/app/animals" },
-  { key: "services",  label: "Services",  icon: "scissors", href: "/app/services" },
-  { key: "money",     label: "Money",     icon: "dollar",   href: "/app/money" },
-  { key: "notes",     label: "Notes",     icon: "note",     href: "/app/notes" },
-];
+const ctx = await getTenantCtx();
+if (!ctx) redirect("/login");
+// then query: db.modelName.findMany({ where: { tenantId: ctx.tenantId }, ... })
 ```
 
-### 7.2 Today tab
+### Tab inventory
 
-Query: `SELECT appointments WHERE tenantId = ? AND DATE(startsAt) = TODAY ORDER BY startsAt`
-
-Panels:
-1. **Hero card** — greeting, total pets today, expected revenue, ring progress (completed / total)
-2. **Run of show** — sorted appointment rows with status, pet name, service, price, quick status-change buttons
-3. **Rebooking alerts** — top 4 animals past cadence, sorted by days overdue
-4. **Outstanding invoices** — unpaid invoice count + total
-
-### 7.3 Calendar tab
-
-Default view: 7-day week starting from Monday of current week.
-Show appointment blocks in time slots. Click slot → "New booking" side panel.
-"New booking" flow: select date → select service → shows available slots (calls availability engine) → select slot → select client → select animal → confirm.
-
-### 7.4 Clients tab
-
-- Searchable by name, phone, email
-- List: name, phone, # animals, last visit, tier badge
-- Detail page: client info + linked animals + recent appointments + notes
-
-### 7.5 Animals tab
-
-- Searchable by name, breed, owner name
-- Cards with: name, species, breed, age, weight, allergy chips, behavior chips, last visit, cadence badge
-- Detail page: full profile + grooming history + note feed + attachment gallery
-
-### 7.6 Services tab
-
-- Table: name, duration, price, buffer, active toggle
-- Inline edit or modal form
-- New service button
-
-### 7.7 Bookings tab
-
-- Weekly bar chart (revenue per day, 8-week lookback)
-- Summary table: date, appointment count, revenue, avg ticket
-- Filter by service or date range
-
-### 7.8 Money tab
-
-- Invoice list with status pills: DRAFT / SENT / PAID / UNPAID / OVERDUE / VOID
-- Summary row: total outstanding, total paid this month
-- Click invoice → detail with line items, mark paid / send
-
-### 7.9 Notes tab
-
-- Chronological feed
-- Filter by tag: temperament / care / health / general / followup
-- Filter by animal or client
-- New note button (inline form)
-
-### 7.10 Rebooking tab
-
-- All animals where `(today - lastVisitAt) > preferredCadenceDays`
-- Sort by days overdue descending
-- Each row: animal name, breed, owner, days overdue, cadence, "Book now" button
+| Tab | Route | Server/Client | Data |
+|---|---|---|---|
+| Today | `/app/today` | Server | Appointments today, tenant KPIs, rebooking alerts, unpaid invoices |
+| Calendar | `/app/calendar` | Server | Current week Mon–Sun, grouped by day |
+| Bookings | `/app/bookings` | Server | Paginated appointment list, filter by status |
+| Rebooking | `/app/rebooking` | Server | Animals past cadence, due this week |
+| Clients | `/app/clients` | Server | Searchable list + tier badges |
+| Clients detail | `/app/clients/[id]` | Server | Profile + animals + appointments + notes |
+| Animals | `/app/animals` | Server | Card grid + allergy/behavior chips |
+| Animals detail | `/app/animals/[id]` | Server | Full profile + history + care notes |
+| Services | `/app/services` | Client | Hardcoded demo table + modal (not yet DB-backed) |
+| Money | `/app/money` | Server | Invoice list + revenue KPIs |
+| Notes | `/app/notes` | Server | Filterable note feed |
 
 ---
 
 ## 8. n8n REST API — Complete Spec
 
 Base URL: `https://yourdomain.com/api/v1`
+Authentication: `Authorization: Bearer <api_key_token>`
+All responses: `{ data: ..., meta?: { page, pageSize, total, pages } }`
+All errors: `{ error: "message", status: 4xx, details?: {...} }`
 
-Authentication: `Authorization: Bearer gh_<prefix>_<secret>`
+### Endpoints implemented
 
-All responses are JSON. All errors follow:
-```json
-{ "error": "error_code", "message": "Human-readable detail" }
+| Method | Path | Scope | Notes |
+|---|---|---|---|
+| GET | `/api/v1/me` | any | Returns tenant info + scopes |
+| GET | `/api/v1/availability` | any | Prisma-backed, real business hours |
+| GET | `/api/v1/services` | `appointments:read` | Active services only |
+| GET, POST | `/api/v1/appointments` | `appointments:read/write` | Real conflict check on POST |
+| GET, PATCH | `/api/v1/appointments/:id` | `appointments:read/write` | |
+| POST | `/api/v1/appointments/:id/cancel` | `appointments:write` | Sets CANCELLED |
+| POST | `/api/v1/appointments/:id/reschedule` | `appointments:write` | Conflict check |
+| PATCH | `/api/v1/appointments/:id/status` | `appointments:write` | CONFIRMED→COMPLETED flow |
+| GET, POST | `/api/v1/clients` | `clients:read/write` | |
+| GET, PATCH, DELETE | `/api/v1/clients/:id` | `clients:read/write` | |
+| GET, POST | `/api/v1/animals` | `animals:read/write` | |
+| GET, PATCH | `/api/v1/animals/:id` | `animals:read/write` | |
+| GET, POST | `/api/v1/notes` | `appointments:read/write` | GroomingNote model |
+| GET, POST | `/api/v1/webhook-endpoints` | `webhooks:read/write` | Returns one-time signingSecret on POST |
+| GET | `/api/v1/openapi` | none | OpenAPI JSON spec |
+
+### Availability endpoint
+
 ```
+GET /api/v1/availability?serviceId=svc_abc&date=2025-06-15
 
-All list endpoints support `?limit=50&cursor=<id>` pagination.
-
----
-
-### 8.1 Identity
-
-#### `GET /api/v1/me`
-Returns the tenant and API key context.
-
-**Response:**
-```json
+Response:
 {
-  "tenant": {
-    "id": "cld_...",
-    "name": "Nina's Pet Salon",
-    "slug": "ninas-pet-salon",
-    "timezone": "America/Los_Angeles"
-  },
-  "scopes": ["appointments:read", "appointments:write", "clients:read"]
+  "data": {
+    "date": "2025-06-15",
+    "serviceId": "svc_abc",
+    "timezone": "America/Los_Angeles",
+    "slots": [
+      { "startsAt": "2025-06-15T16:00:00.000Z", "endsAt": "2025-06-15T17:30:00.000Z" },
+      ...
+    ]
+  }
 }
 ```
 
----
-
-### 8.2 Clients
-
-#### `GET /api/v1/clients`
-**Scope:** `clients:read`
-**Query:** `?q=<search>&limit=50&cursor=<id>`
-
-**Response:**
-```json
-{
-  "clients": [
-    {
-      "id": "cld_...",
-      "name": "Marcus Holloway",
-      "phone": "(253) 555-0190",
-      "email": "marcus@example.com",
-      "tier": "Regular",
-      "animalCount": 1,
-      "createdAt": "2026-01-01T00:00:00.000Z"
-    }
-  ],
-  "nextCursor": null
-}
-```
-
-#### `POST /api/v1/clients`
-**Scope:** `clients:write`
-
-**Body:**
-```json
-{
-  "name": "Sarah Kim",
-  "phone": "(206) 555-1234",
-  "email": "sarah@example.com",
-  "address": "123 Main St, Seattle WA",
-  "notes": "Prefers morning slots"
-}
-```
-
-#### `GET /api/v1/clients/:id`
-**Scope:** `clients:read`
-
-#### `PATCH /api/v1/clients/:id`
-**Scope:** `clients:write`
-Partial update. Returns updated client.
-
-#### `DELETE /api/v1/clients/:id`
-**Scope:** `clients:write`
-Returns `204 No Content`. Fails with 409 if client has active appointments.
-
----
-
-### 8.3 Animals
-
-#### `GET /api/v1/animals`
-**Scope:** `animals:read`
-**Query:** `?clientId=<id>&q=<search>&limit=50&cursor=<id>`
-
-**Response:**
-```json
-{
-  "animals": [
-    {
-      "id": "anim_...",
-      "clientId": "cld_...",
-      "name": "Atlas",
-      "species": "dog",
-      "breed": "Bernese Mountain Dog",
-      "sex": "M",
-      "dateOfBirth": "2020-06-22",
-      "weightLbs": "92.00",
-      "allergies": ["Tea-tree"],
-      "behaviorFlags": ["Gentle giant", "Owner nearby for nail trim"],
-      "preferredCadenceDays": 35,
-      "lastVisitAt": "2026-04-22T17:00:00.000Z",
-      "careSummary": "Long double coat. Use low-stress dryer ramp-up.",
-      "daysSinceLastVisit": 16,
-      "dueForRebookIn": 19
-    }
-  ]
-}
-```
-
-#### `POST /api/v1/animals`
-**Scope:** `animals:write`
-
-**Body:**
-```json
-{
-  "clientId": "cld_...",
-  "name": "Mochi",
-  "species": "dog",
-  "breed": "Shih Tzu",
-  "sex": "F",
-  "dateOfBirth": "2022-03-15",
-  "weightLbs": 12.5,
-  "allergies": [],
-  "behaviorFlags": ["Anxious around loud dryers"],
-  "preferredCadenceDays": 42,
-  "careSummary": "Soft coat, needs gentle detangling."
-}
-```
-
-#### `GET /api/v1/animals/:id`
-**Scope:** `animals:read`
-
-#### `PATCH /api/v1/animals/:id`
-**Scope:** `animals:write`
-
----
-
-### 8.4 Services
-
-#### `GET /api/v1/services`
-**Scope:** `clients:read` (no dedicated scope — services are public catalog)
-**Query:** `?active=true`
-
-**Response:**
-```json
-{
-  "services": [
-    {
-      "id": "svc_...",
-      "name": "Full Groom",
-      "description": "Bath, cut, sanitary trim, paw pads, nails, and ears.",
-      "durationMinutes": 120,
-      "bufferBeforeMinutes": 0,
-      "bufferAfterMinutes": 15,
-      "priceCents": 9500,
-      "priceFormatted": "$95.00",
-      "active": true
-    }
-  ]
-}
-```
-
----
-
-### 8.5 Availability
-
-#### `GET /api/v1/availability`
-**Scope:** `availability:read`
-
-**Query parameters:**
-
-| Param | Required | Description |
-|---|---|---|
-| `serviceId` | Yes | Service to book (determines slot duration + buffers) |
-| `date` | Yes | Date to check: `YYYY-MM-DD` |
-| `staffUserId` | No | Filter by specific staff member |
-| `stepMinutes` | No | Slot step size. Default: 15 |
-
-**Response:**
-```json
-{
-  "date": "2026-05-10",
-  "timezone": "America/Los_Angeles",
-  "service": {
-    "id": "svc_...",
-    "name": "Full Groom",
-    "durationMinutes": 120
-  },
-  "slots": [
-    { "startsAt": "2026-05-10T15:00:00.000Z", "endsAt": "2026-05-10T17:00:00.000Z" },
-    { "startsAt": "2026-05-10T15:15:00.000Z", "endsAt": "2026-05-10T17:15:00.000Z" }
-  ]
-}
-```
-
-**Algorithm:** (implemented in `src/domain/availability.ts`)
-1. Fetch tenant business hours for the given day (convert from local time to UTC)
-2. Fetch all confirmed/in-progress appointments that overlap the day
-3. Fetch all AvailabilityBlock records (blocked time, breaks)
-4. Build `openWindows` from business hours
-5. Build `busyWindows` from appointments + blocks (accounting for service buffer times)
-6. Call `computeAvailability({ slotMinutes: service.durationMinutes + service.bufferAfterMinutes, ... })`
-7. Return slots in tenant timezone
-
----
-
-### 8.6 Appointments
-
-#### `GET /api/v1/appointments`
-**Scope:** `appointments:read`
-**Query:** `?date=YYYY-MM-DD&status=CONFIRMED&animalId=<id>&limit=50&cursor=<id>`
-
-**Response:**
-```json
-{
-  "appointments": [
-    {
-      "id": "appt_...",
-      "tenantId": "ten_...",
-      "client": { "id": "...", "name": "Marcus Holloway", "phone": "(253) 555-0190" },
-      "animal": { "id": "...", "name": "Atlas", "breed": "Bernese Mountain Dog" },
-      "service": { "id": "...", "name": "Full Groom", "durationMinutes": 120, "priceCents": 9500 },
-      "staffUserId": null,
-      "startsAt": "2026-05-08T16:30:00.000Z",
-      "endsAt": "2026-05-08T18:30:00.000Z",
-      "status": "CONFIRMED",
-      "source": "DASHBOARD",
-      "priceCents": 9500,
-      "createdAt": "2026-05-01T00:00:00.000Z"
-    }
-  ],
-  "nextCursor": null
-}
-```
-
-#### `POST /api/v1/appointments`
-**Scope:** `appointments:write`
-
-**Body:**
-```json
-{
-  "clientId": "cld_...",
-  "animalId": "anim_...",
-  "serviceId": "svc_...",
-  "startsAt": "2026-05-10T15:00:00.000Z",
-  "staffUserId": null,
-  "notes": "Owner will wait in lobby"
-}
-```
-
-**Validation:**
-- `clientId` and `animalId` must belong to the same tenant
-- `animalId.clientId` must match `clientId`
-- `startsAt` must be a bookable slot (run availability check)
-- Reject overlapping appointments unless `bookingRules.allowOverlap = true`
-- `endsAt` is computed: `startsAt + service.durationMinutes minutes`
-
-**Side effects:**
-- Creates `AuditLog` record
-- Queues `appointment.created` webhook event
-
-#### `GET /api/v1/appointments/:id`
-**Scope:** `appointments:read`
-
-#### `PATCH /api/v1/appointments/:id`
-**Scope:** `appointments:write`
-Allowed fields: `startsAt`, `staffUserId`, `priceCents`
-Side effects: audit log + webhook `appointment.rescheduled` (if time changes)
-
-#### `POST /api/v1/appointments/:id/cancel`
-**Scope:** `appointments:write`
-
-**Body:**
-```json
-{ "reason": "Client requested cancellation" }
-```
-
-- Sets `status = CANCELLED`, `cancellationReason = reason`
-- Creates audit log
-- Queues `appointment.cancelled` webhook
-
-#### `POST /api/v1/appointments/:id/reschedule`
-**Scope:** `appointments:write`
-
-**Body:**
-```json
-{
-  "startsAt": "2026-05-12T14:00:00.000Z",
-  "reason": "Client asked to move to Tuesday"
-}
-```
-
-- Validates the new slot is available
-- Updates `startsAt`, `endsAt`, `rescheduleReason`
-- Creates audit log
-- Queues `appointment.rescheduled` webhook
-
-#### `POST /api/v1/appointments/:id/status`
-**Scope:** `appointments:write`
-
-**Body:**
-```json
-{ "status": "CHECKED_IN" }
-```
-
-Valid transitions:
-```
-CONFIRMED    → CHECKED_IN, CANCELLED, NO_SHOW
-CHECKED_IN   → IN_PROGRESS, CANCELLED
-IN_PROGRESS  → READY, CANCELLED
-READY        → COMPLETED
-COMPLETED    → (terminal)
-CANCELLED    → (terminal)
-NO_SHOW      → (terminal)
-```
-
-- Creates audit log
-- Queues `appointment.status_changed` webhook
-- If `COMPLETED`: updates `animal.lastVisitAt`
-
----
-
-### 8.7 Grooming Notes
-
-#### `GET /api/v1/notes`
-**Scope:** `notes:read`
-**Query:** `?animalId=<id>&clientId=<id>&tag=temperament&limit=50&cursor=<id>`
-
-**Response:**
-```json
-{
-  "notes": [
-    {
-      "id": "note_...",
-      "animalId": "anim_...",
-      "clientId": "cld_...",
-      "appointmentId": null,
-      "tag": "temperament",
-      "body": "Atlas is calmer when Marcus stays in the lounge.",
-      "visibility": "INTERNAL",
-      "author": { "id": "usr_...", "name": "Nina Reyes" },
-      "createdAt": "2026-04-22T17:30:00.000Z"
-    }
-  ]
-}
-```
-
-#### `POST /api/v1/notes`
-**Scope:** `notes:write`
-
-**Body:**
-```json
-{
-  "animalId": "anim_...",
-  "clientId": "cld_...",
-  "appointmentId": null,
-  "tag": "care",
-  "body": "Used Earthbath shampoo, no reaction.",
-  "visibility": "INTERNAL"
-}
-```
-
----
-
-### 8.8 Invoices
-
-#### `GET /api/v1/invoices`
-**Scope:** `invoices:read`
-**Query:** `?status=UNPAID&clientId=<id>&limit=50&cursor=<id>`
-
-#### `POST /api/v1/invoices`
-**Scope:** `invoices:write`
-
-**Body:**
-```json
-{
-  "clientId": "cld_...",
-  "animalId": "anim_...",
-  "appointmentId": "appt_...",
-  "lineItems": [
-    { "description": "Full Groom", "quantity": 1, "unitCents": 9500 }
-  ],
-  "taxCents": 0,
-  "dueAt": "2026-05-15T00:00:00.000Z"
-}
-```
-
----
-
-### 8.9 Webhook Endpoints
-
-#### `GET /api/v1/webhook-endpoints`
-**Scope:** `webhooks:manage`
-
-#### `POST /api/v1/webhook-endpoints`
-**Scope:** `webhooks:manage`
-
-**Body:**
-```json
-{
-  "url": "https://n8n.yourdomain.com/webhook/glasshound",
-  "description": "n8n booking automation",
-  "events": [
-    "appointment.created",
-    "appointment.cancelled",
-    "appointment.rescheduled",
-    "appointment.status_changed",
-    "rebooking.due"
-  ]
-}
-```
-
-**Response includes** a one-time `signingSecret` for HMAC verification. Store it in n8n.
+Algorithm: reads `tenant.businessHours` (JSON field keyed by JS day-of-week 0–6) → fetches existing appointments + blocked windows → calls `computeAvailability()` in `src/domain/availability.ts`.
 
 ---
 
@@ -971,95 +465,54 @@ NO_SHOW      → (terminal)
 
 | Event | Triggered by |
 |---|---|
-| `appointment.created` | New appointment booked (API or dashboard) |
-| `appointment.rescheduled` | Time or date changed |
-| `appointment.cancelled` | Status set to CANCELLED |
-| `appointment.status_changed` | Any status transition |
-| `client.created` | New client added |
-| `animal.created` | New animal profile |
-| `note.created` | New grooming note |
-| `invoice.created` | Invoice created |
-| `invoice.status_changed` | Invoice status updated |
-| `rebooking.due` | Worker job: animal past cadence (daily check) |
+| `appointment.created` | New appointment booked |
+| `appointment.rescheduled` | Time changed |
+| `appointment.cancelled` | Status → CANCELLED |
+| `appointment.completed` | Status → COMPLETED |
+| `rebooking.due` | Worker job: animal past cadence |
 
 ### 9.2 Payload format
 
 ```json
 {
-  "id": "evt_01jhzx...",
   "event": "appointment.created",
   "tenantId": "ten_...",
   "timestamp": "2026-05-08T22:15:00.000Z",
-  "data": {
-    "appointment": { ... }
-  }
+  "data": { "appointmentId": "...", "animalId": "...", "clientId": "...", "startsAt": "..." }
 }
 ```
 
-### 9.3 Signature verification
+### 9.3 Signature
 
 ```
-X-Glasshound-Signature: sha256=<HMAC-SHA256(signingSecret, rawBody)>
+X-Glasshound-Signature: sha256=<HMAC-SHA256(timestamp + "." + rawBody, signingSecret)>
+X-Glasshound-Timestamp: 1715000000000
 ```
 
-**n8n verification (Code node):**
-```javascript
-const crypto = require('crypto');
-const secret = $env.GLASSHOUND_WEBHOOK_SECRET;
-const sig = $input.headers['x-glasshound-signature'].replace('sha256=', '');
-const computed = crypto.createHmac('sha256', secret).update($input.rawBody).digest('hex');
-if (sig !== computed) throw new Error('Invalid signature');
-return $input.all();
-```
+### 9.4 Retry policy (BullMQ worker)
 
-### 9.4 Retry policy
-
-- Immediate attempt on event creation
-- Retry on non-2xx: 1m → 5m → 15m → 1h → 4h → 24h (6 total attempts)
-- `WebhookDelivery` record updated after each attempt with `responseStatus` and `responseBody`
+Delays: 1m → 5m → 15m → 1h → 4h → 24h (6 total attempts)
 
 ---
 
 ## 10. Availability Engine
 
-Source: `src/domain/availability.ts` — **already complete, do not rewrite.**
-
-### Integration in `/api/v1/availability`
+Source: `src/domain/availability.ts` — **complete, do not rewrite.**
 
 ```typescript
-// Pseudocode for the Prisma-backed availability route
-const service = await db.service.findUnique({ where: { id: serviceId, tenantId } });
-const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
-
-// Convert business hours to UTC windows for the requested date
-const openWindows = businessHoursToUtcWindows(tenant.businessHours, date, tenant.timezone);
-
-// Fetch busy windows: confirmed/in-progress appointments + blocked time
-const appointments = await db.appointment.findMany({
-  where: { tenantId, startsAt: { gte: dayStart }, endsAt: { lte: dayEnd },
-           status: { notIn: ['CANCELLED', 'NO_SHOW'] } }
-});
-
-const blocks = await db.availabilityBlock.findMany({
-  where: { tenantId, startsAt: { lt: dayEnd }, endsAt: { gt: dayStart } }
-});
-
-const busyWindows = [
-  ...appointments.map(a => ({
-    startsAt: subMinutes(a.startsAt, service.bufferBeforeMinutes),
-    endsAt: addMinutes(a.endsAt, service.bufferAfterMinutes),
-  })),
-  ...blocks.map(b => ({ startsAt: b.startsAt, endsAt: b.endsAt })),
-];
-
-const slots = computeAvailability({
-  from: dayStart, to: dayEnd,
-  slotMinutes: service.durationMinutes,
-  stepMinutes: stepMinutes ?? 15,
-  openWindows,
-  busyWindows,
-});
+export function computeAvailability(opts: {
+  from: Date; to: Date;
+  slotMinutes: number; stepMinutes: number;
+  openWindows: { startsAt: Date; endsAt: Date }[];
+  busyWindows:  { startsAt: Date; endsAt: Date }[];
+}): { startsAt: Date; endsAt: Date }[]
 ```
+
+The availability API route at `src/app/api/v1/availability/route.ts` wraps this with Prisma-backed business hours, appointments, and blocked time. Business hours are stored as:
+```json
+{ "1": {"open":"09:00","close":"17:00"}, "2": {...}, "0": null }
+```
+Where keys are JS day-of-week strings (0 = Sunday) and `null` = closed.
 
 ---
 
@@ -1069,10 +522,9 @@ const slots = computeAvailability({
 
 ```bash
 cp .env.example .env
-# Edit .env: set SESSION_SECRET, POSTGRES_PASSWORD, APP_DOMAIN
+# Edit .env: SESSION_SECRET (32+ chars), POSTGRES_PASSWORD, APP_DOMAIN
 docker compose up -d
-# Wait for health checks to pass, then:
-docker compose exec web npm run prisma:deploy
+docker compose exec web npx prisma migrate deploy
 docker compose exec web npm run seed
 ```
 
@@ -1080,94 +532,111 @@ docker compose exec web npm run seed
 
 | Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | Yes | Postgres connection string (set by compose) |
-| `REDIS_URL` | Yes | Redis URL (set by compose) |
-| `SESSION_SECRET` | Yes | 32+ char random string for iron-session |
-| `APP_URL` | Yes | Public URL e.g. `https://app.yourdomain.com` |
-| `APP_DOMAIN` | Yes | Domain for Caddy, e.g. `app.yourdomain.com` |
-| `S3_ENDPOINT` | Compose default | MinIO URL |
-| `S3_BUCKET` | Compose default | `glasshound-assets` |
-| `S3_ACCESS_KEY_ID` | Compose default | MinIO root user |
-| `S3_SECRET_ACCESS_KEY` | Compose default | MinIO root password |
-| `NEXT_TELEMETRY_DISABLED` | Yes (compose sets) | `1` |
+| `DATABASE_URL` | Yes | Postgres URL |
+| `REDIS_URL` | Yes | Redis URL |
+| `SESSION_SECRET` | Yes | 32+ char random string |
+| `APP_URL` | Yes | `https://app.yourdomain.com` |
+| `APP_DOMAIN` | Yes | Domain for Caddy |
+| `S3_ENDPOINT` | Compose | MinIO endpoint |
+| `S3_BUCKET` | Compose | `glasshound-assets` |
+| `S3_ACCESS_KEY_ID` | Compose | MinIO user |
+| `S3_SECRET_ACCESS_KEY` | Compose | MinIO password |
 
 ---
 
 ## 12. Sprint Checklist
 
-### Sprint 0: Foundation ✅ DONE
+### Sprint 0: Foundation ✅ COMPLETE
 - [x] Next.js 16 + TypeScript scaffold
 - [x] Docker Compose: postgres, redis, minio, web, worker, caddy
-- [x] Prisma schema (all 11 models)
+- [x] Prisma schema (all 12 models)
 - [x] Seed: Nina's Pet Salon demo tenant
 - [x] Health route: `GET /api/health`
 - [x] Availability engine: `src/domain/availability.ts`
-- [x] Static stubs: login, dashboard, marketing, developers
 
-### Sprint 1: Auth
-- [ ] `src/lib/session.ts` — iron-session config
-- [ ] `src/middleware.ts` — protect /app/* routes
-- [ ] `POST /api/auth/login` — working email/password auth
-- [ ] `POST /api/auth/logout` — clear session
-- [ ] `POST /api/auth/register` — create user + tenant + membership
-- [ ] `src/app/login/page.tsx` — functional form
-- [ ] `src/app/register/page.tsx` — salon onboarding form
-- [ ] `src/lib/tenant.ts` — tenant context from session
+### Sprint 1: Auth ✅ COMPLETE
+- [x] `src/lib/session.ts` — iron-session v8 config (`SessionOptions`, not `IronSessionOptions`)
+- [x] `src/middleware.ts` — protect /app/* with `unsealData` (not iron-session/edge)
+- [x] `POST /api/auth/login`
+- [x] `POST /api/auth/logout`
+- [x] `POST /api/auth/register` — creates User + Tenant + Membership in transaction
+- [x] `src/app/login/page.tsx`
+- [x] `src/app/register/page.tsx`
+- [x] `src/lib/tenant.ts` — `getTenantCtx()` + `requireTenantCtx()`
 
-### Sprint 2: Design System + Dashboard Shell
-- [ ] `src/app/globals.css` — merged marketing + dashboard tokens
-- [ ] `src/app/layout.tsx` — Plus Jakarta Sans + Instrument Serif + Fraunces
-- [ ] `src/app/page.tsx` — full marketing page (Home.html faithful)
-- [ ] `src/app/app/layout.tsx` — sidebar (8 tabs) + topbar
-- [ ] `src/app/app/page.tsx` — redirect to /app/today
+### Sprint 2: Design System + Dashboard Shell ✅ COMPLETE
+- [x] `src/app/globals.css` — merged marketing + dashboard tokens, all component classes
+- [x] `src/app/layout.tsx` — fonts loaded via @import
+- [x] `src/app/page.tsx` — full marketing page matching prototype
+- [x] `src/app/app/layout.tsx` — sidebar (9 tabs) + topbar, logout
+- [x] `src/app/app/page.tsx` — redirect to /app/today
 
-### Sprint 3: Clients, Animals, Services, Notes
-- [ ] `src/server/actions/clients.ts`
-- [ ] `src/server/actions/animals.ts`
-- [ ] `src/server/actions/services.ts`
-- [ ] `src/server/actions/notes.ts`
-- [ ] Dashboard: Clients list + detail
-- [ ] Dashboard: Animals list + detail
-- [ ] Dashboard: Services CRUD
-- [ ] Dashboard: Notes feed
+### Sprint 3: Clients, Animals, Services, Notes ✅ COMPLETE
+- [x] `src/server/actions/clients.ts`
+- [x] `src/server/actions/animals.ts`
+- [x] `src/server/actions/services.ts`
+- [x] `src/server/actions/notes.ts`
+- [x] `/app/clients` — searchable list
+- [x] `/app/clients/[id]` — full client detail
+- [x] `/app/animals` — card grid with chips
+- [x] `/app/animals/[id]` — animal profile + care notes
+- [x] `/app/services` — table + new-service modal (client component, demo data — not yet DB-backed)
+- [x] `/app/notes` — filterable feed
 
-### Sprint 4: Calendar, Availability, Booking
-- [ ] `src/server/actions/appointments.ts`
-- [ ] Dashboard: Today tab (hero, run-of-show, rebooking alerts)
-- [ ] Dashboard: Calendar tab (week view + booking modal)
-- [ ] Dashboard: Rebooking tab
-- [ ] Availability: Prisma-backed GET /api/v1/availability
+### Sprint 4: Calendar, Availability, Booking ✅ COMPLETE
+- [x] `src/server/actions/appointments.ts`
+- [x] `/app/today` — KPIs, run-of-show, rebooking alerts, invoice count
+- [x] `/app/calendar` — 7-column week view, today highlighted
+- [x] `/app/rebooking` — overdue animals + due-this-week panel
+- [x] `GET /api/v1/availability` — real Prisma-backed route
 
-### Sprint 5: n8n API + Webhooks
-- [ ] `src/lib/api-auth.ts` — Bearer token validation
-- [ ] `GET /api/v1/me`
-- [ ] `GET+POST /api/v1/clients` + `[id]`
-- [ ] `GET+POST /api/v1/animals` + `[id]`
-- [ ] `GET /api/v1/services`
-- [ ] `GET+POST /api/v1/appointments` + `[id]/cancel|reschedule|status`
-- [ ] `GET /api/v1/availability`
-- [ ] `GET+POST /api/v1/notes`
-- [ ] `GET+POST /api/v1/invoices`
-- [ ] `GET+POST /api/v1/webhook-endpoints`
-- [ ] Webhook delivery worker (BullMQ job)
-- [ ] HMAC signature on webhook delivery
-- [ ] `src/app/api/v1/openapi/route.ts` — serve OpenAPI JSON
+### Sprint 5: n8n API + Webhooks ✅ COMPLETE
+- [x] `src/lib/api-auth.ts` — `resolveApiKey()`, `apiError()`, `requireScope()`, `paginate()`
+- [x] `GET /api/v1/me`
+- [x] `GET+POST /api/v1/clients` + `/clients/[id]` (GET, PATCH, DELETE)
+- [x] `GET+POST /api/v1/animals` + `/animals/[id]` (GET, PATCH)
+- [x] `GET /api/v1/services`
+- [x] `GET+POST /api/v1/appointments` + `[id]` (GET, PATCH, cancel, reschedule, status)
+- [x] `GET+POST /api/v1/notes`
+- [x] `GET+POST /api/v1/webhook-endpoints`
+- [x] `GET /api/v1/openapi`
+- [x] BullMQ webhook delivery worker (`src/worker/index.ts`)
+- [x] HMAC signing on webhook delivery
+- [x] `/developers` — interactive API docs page with n8n guide
 
-### Sprint 6: Money + Reporting
-- [ ] `src/server/actions/invoices.ts`
-- [ ] Dashboard: Money tab (invoice list, status, totals)
-- [ ] Dashboard: Bookings tab (weekly revenue + chart)
+### Sprint 6: Money + Invoices ✅ COMPLETE
+- [x] `/app/money` — invoice list + monthly/yearly revenue KPIs (Prisma-backed)
+- [x] `/app/bookings` — full appointment ledger (filter, paginate, source badges)
+- [x] `src/server/actions/invoices.ts` — createInvoice, sendInvoice, markInvoicePaid, voidInvoice
+- [x] `GET+POST /api/v1/invoices` + `/invoices/[id]` (GET, PATCH status/paidAt/issuedAt)
+- [x] `src/server/actions/booking.ts` — fetchServicesForBooking, fetchClientsWithAnimals, fetchAvailableSlots
+- [x] `src/components/BookingModal.tsx` — 4-step booking modal (service→slot→client→confirm)
 
-### Sprint 7: Marketing + Onboarding
-- [ ] Marketing page polish
-- [ ] Onboarding: after register → setup wizard (hours, first services, import)
-- [ ] Developer docs page with OpenAPI viewer
+### Sprint 7: Polish + Wiring 🔶 PARTIAL
+- [x] Marketing page matching prototype aesthetic
+- [x] `/developers` — full API reference with code copy, n8n guide
+- [x] `/app/services` — Prisma-backed, toggle active, create/edit modal wired to upsertService
+- [x] `/app/calendar` — "New booking" button opens BookingModal with real services + availability
+- [x] `/app/today` — StatusChanger component for CONFIRMED→CHECKED_IN→IN_PROGRESS→READY→COMPLETED
+- [x] `/app/settings` — API key management (generate, revoke, scopes selection, one-time token display)
+- [x] `/app/money` — "New invoice" modal (client/animal/line-items/tax/due-date), Send / Mark paid / Void row actions
+- [x] `/app/bookings` — weekly revenue bar chart (8-week CSS bars), "New booking" button wired to BookingModal
+- [ ] Post-register onboarding wizard (set hours, add first service)
+- [ ] Client-visible note email preview
 
-### Sprint 8: Hardening
-- [ ] Docker smoke tests
+### Sprint 8: Hardening 🔶 PARTIAL
+- [x] Rate limiting on `/api/v1/*` — Redis sliding window, 100 req/min per API key (`src/lib/ratelimit.ts`), wired to appointments + clients routes; apply `const rl = await checkRateLimit(auth.keyId); if (rl) return rl;` to add to any other route
+- [x] AuditLog writes — `src/lib/audit.ts` `writeAudit()` helper (best-effort, never throws); wired to appointment.created, appointment.status_changed, invoice.created, invoice.paid
+- [x] CSP + security headers in `next.config.ts` — Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy
+- [x] Redis singleton — `src/lib/redis.ts`, ioredis with lazy connect + fail-open on timeout
+- [x] `/app/onboarding` — 3-step wizard: set business hours (interactive toggle grid), add first service, done screen; new accounts redirect here from register
+- [x] businessHours format fixed in register route — now uses numeric keys `{"0": null, "1": {open,close}, ...}` matching the availability engine
+- [x] DashSidebar extracted to `src/components/DashSidebar.tsx` — dynamic name/role from session, Settings link added
+- [x] Layout refactored to server component — fetches session, passes name+role to DashSidebar
 - [ ] Tenant-isolation integration tests
 - [ ] Webhook retry tests
-- [ ] Fresh-deploy checklist
+- [ ] Docker smoke test script
+- [ ] Prisma migrations workflow
 
 ---
 
@@ -1176,29 +645,141 @@ docker compose exec web npm run seed
 **Tenant:** Nina's Pet Salon
 - Slug: `ninas-pet-salon`
 - Timezone: `America/Los_Angeles`
-- Hours: Mon–Fri 7:30–18:00, Sat 8:00–16:00
+- Business hours: Mon–Fri 09:00–17:00, Sat 09:00–14:00, Sun closed
 
-**Users:**
-- `nina@example.com` / `demo-password` — OWNER role
+**Login:** `nina@example.com` / `demo-password` (OWNER role)
 
 **Services:**
-| Name | Duration | Price | Buffer after |
+| Name | Duration | Price | Buffer |
 |---|---|---|---|
-| Bath & Brush | 60 min | $65 | 15 min |
-| Full Groom | 120 min | $95 | 15 min |
-| De-shed Treatment | 90 min | $85 | 15 min |
-| Nail Trim | 15 min | $18 | 15 min |
+| Full Groom | 90 min | $75 | 15 min |
+| Bath & Brush | 60 min | $55 | 10 min |
+| Nail Trim | 20 min | $15 | 5 min |
+| Cat Groom | 75 min | $85 | 15 min |
 
-**Clients:** Marcus Holloway — (253) 555-0190 — `marcus@example.com`
-**Animals:** Atlas — Bernese Mountain Dog — M — 92 lbs — DOB 2020-06-22
-- Allergies: Tea-tree
-- Behavior: Gentle giant, Owner nearby for nail trim
-- Cadence: 35 days
-- Last visit: 2026-04-22
+**Clients:** See `prisma/seed.ts` for full demo dataset including Atlas (Bernese Mountain Dog), Biscuit (Golden Retriever), and others.
 
-**Appointments:** Atlas Full Groom — 2026-05-08 16:30–18:30 — CONFIRMED
+---
+
+## 14. AI Pickup Prompt
+
+> **Copy-paste the block below into any new coding agent to onboard it instantly.**
+> Keep it updated as sprints complete.
+
+---
+
+```
+You are picking up development on Glasshound — a multi-tenant pet grooming SaaS.
+Read this entire block before writing any code.
+
+## Project
+- Next.js 16 App Router + TypeScript + Prisma + PostgreSQL + Redis + BullMQ + MinIO + Caddy
+- All in Docker Compose (docker-compose.yml at root)
+- Working directory: the repo root (package.json at root)
+- Build command: `npm run build` (runs `prisma generate && next build`)
+- The build MUST pass with zero type errors before you finish. Run it and fix all errors.
+
+## What exists and works (build passes, 38 routes)
+Sprints 0–7 are largely complete:
+- Auth: iron-session v8, login/logout/register, session middleware via unsealData
+- Dashboard shell: sidebar (9 tabs + Settings), topbar, all page routes render
+- All dashboard tabs implemented as server components with real Prisma queries
+- Full REST API: /api/v1/* — me, availability, appointments (CRUD+cancel+reschedule+status),
+  clients (CRUD), animals (CRUD), services, notes, webhook-endpoints, invoices (CRUD), openapi
+- BullMQ worker for webhook delivery with HMAC signing
+- Marketing page + Interactive /developers API docs page
+- BookingModal (4-step: service→slot→client→confirm) wired to availability engine + createAppointment
+- /app/services — Prisma-backed, toggle, create/edit modal via upsertService
+- /app/calendar — "New booking" button opens BookingModal
+- /app/today — StatusChanger component (CONFIRMED→CHECKED_IN→IN_PROGRESS→READY→COMPLETED)
+- /app/settings — API key management (generate with scopes, revoke, one-time token display)
+- Server actions: appointments, clients, animals, services, notes, invoices, booking, apikeys
+
+## Known issues / things NOT wired up yet
+- /app/money "New invoice" and "Mark paid" buttons exist but are not wired to server actions
+- /app/bookings has no revenue chart (currently just a table)
+- No post-register onboarding wizard
+- No rate limiting on /api/v1/* (Sprint 8)
+- No AuditLog writes (model exists in schema but no code writes to it — Sprint 8)
+- /app/today and /app/calendar "New booking" button: works but doesn't pre-fill date from calendar cell
+
+## Critical conventions — read before writing any code
+
+### Database
+- Always import: `import { db } from "@/server/db"` (NOT `prisma` — both are exported but `db` is the alias)
+- Every query MUST include tenantId from session — NEVER from request body/URL params
+- Prisma schema is at prisma/schema.prisma — do not modify it
+
+### Auth
+- Session library: iron-session v8. Import type is `SessionOptions` (NOT `IronSessionOptions`)
+- Server components: `const ctx = await getTenantCtx(); if (!ctx) redirect("/login");`
+- Server actions: `const ctx = await requireTenantCtx();` (throws if unauthenticated)
+- Middleware: uses `unsealData` from iron-session (NOT `getIronSession` from iron-session/edge — that subpath doesn't exist)
+
+### API routes
+- `resolveApiKey(req)` returns `ApiCtx | null`
+- `requireScope(auth, "scope")` returns `NextResponse | undefined` — check return: `const e = requireScope(auth, "scope"); if (e) return e;`
+- `paginate(req)` returns `{ skip, take, page, pageSize }` from URL query params
+- All error responses: `apiError("message", statusCode, optionalDetails?)`
+- All success responses: `NextResponse.json({ data: ... })` or `{ data, meta }` for lists
+
+### Client components that call server actions
+- Use `useTransition` + `startTransition(async () => { await serverAction(); })` pattern
+- After mutations that need fresh server data, call `router.refresh()` (from `useRouter`)
+- "use client" components can be co-located with page.tsx or in src/components/
+- Split pages into: page.tsx (server, fetches data) + XxxClient.tsx (client, handles state)
+
+### API key format
+- `src/server/actions/apikeys.ts` — createApiKey(name, scopes), revokeApiKey(id)
+- Token format: `glas_<16hex>_<40hex>` — prefix stored, secret hashed with sha256
+- resolveApiKey splits on last underscore to extract prefix + secret
+
+### TypeScript gotchas in this codebase
+- Prisma Json fields need `as never` cast: `{ lineItems: data.lineItems as never }`
+- z.record requires 2 args: `z.record(z.string(), z.unknown())`
+- Status enums passed to Prisma: use `as never` or cast to the exact Prisma type
+- updateAppointmentStatus(raw: unknown) — pass object: `{ id, status, reason? }`
+
+### Styling
+- Dashboard components use inline styles with CSS vars (--oxblood, --d-ink, --d-line, --glass-bg, etc.)
+- All CSS vars and component classes (.glass-card, .pill, .pill-*, .d-btn, .topbar, .sidebar, etc.) are defined in src/app/globals.css
+- Do NOT create new CSS files — extend globals.css or use inline styles
+- Fonts are loaded via @import in globals.css (not next/font)
+- Dashboard serif: var(--dash-serif) = Fraunces, mono: var(--dash-mono) = JetBrains Mono
+
+## What to work on next (Sprint 8)
+Sprint 7 is essentially complete. Remaining items:
+1. Post-register onboarding wizard (set business hours, add first service, generate first API key)
+2. Client-visible note email preview
+3. Sprint 8 hardening: rate limiting on /api/v1/* (Redis), AuditLog writes, tenant-isolation integration tests, CSP headers in next.config.ts, Prisma migrations workflow
+
+## New components written (reference)
+- src/components/BookingModal.tsx        — 4-step booking modal (service→slot→client→confirm)
+- src/components/CalendarActions.tsx     — "New booking" button + modal (use in any server page)
+- src/components/StatusChanger.tsx       — status advance buttons for today's run-of-show
+- src/components/WeeklyRevenueChart.tsx  — 8-week CSS bar chart (receives { week, revenue }[] from server)
+- src/app/app/services/ServicesClient.tsx  — toggle active, create/edit service modal
+- src/app/app/money/MoneyClient.tsx        — new invoice modal + Send/Mark paid/Void row actions
+- src/app/app/settings/SettingsClient.tsx  — generate API key (scopes), revoke, one-time token display
+
+## Repo structure (key files)
+src/lib/session.ts          — iron-session config
+src/lib/tenant.ts           — getTenantCtx, requireTenantCtx
+src/lib/api-auth.ts         — resolveApiKey, apiError, requireScope, paginate
+src/server/db.ts            — Prisma singleton (exports `db` and `prisma`)
+src/domain/availability.ts  — slot computation engine (DO NOT MODIFY)
+prisma/schema.prisma        — complete schema (DO NOT MODIFY)
+prisma/seed.ts              — Nina's Pet Salon demo data
+src/app/globals.css         — all CSS tokens and component classes
+docs/glasshound-implementation-guide.md — this document (update sprints when done)
+
+## Demo credentials
+URL: http://localhost:3000 (or Docker: http://localhost:8080)
+Login: nina@example.com / demo-password
+```
 
 ---
 
 *End of Glasshound Implementation Reference.*
-*Any AI assistant continuing this project: read Section 12 (Sprint Checklist) first to understand what's done and what's next.*
+*Update Section 12 (Sprint Checklist) as each item is completed.*
+*Update Section 14 (AI Pickup Prompt) to reflect current state before ending a session.*

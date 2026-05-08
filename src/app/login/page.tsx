@@ -9,6 +9,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  async function handleDemo() {
+    setDemoLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/auth/demo-login", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) router.push(data.redirect ?? "/app/today");
+      else setError(data.error ?? "Demo unavailable. Run `npm run db:seed` first.");
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setDemoLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,10 +77,33 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--ink-3)" }}>
-          Demo: <strong>nina@example.com</strong> / <strong>demo-password</strong>
-        </p>
-        <p style={{ textAlign: "center", marginTop: 12, fontSize: 13, color: "var(--ink-3)" }}>
+        <div style={{ margin: "20px 0 4px" }}>
+          <button
+            type="button"
+            onClick={handleDemo}
+            disabled={demoLoading || loading}
+            style={{
+              width: "100%",
+              padding: "11px 16px",
+              background: "var(--surface-2, #f5f0eb)",
+              border: "1.5px solid var(--border, #e8e0d6)",
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 600,
+              color: "var(--ink-1, #1a1a1a)",
+              cursor: demoLoading || loading ? "not-allowed" : "pointer",
+              opacity: demoLoading || loading ? 0.6 : 1,
+              transition: "opacity 0.15s",
+            }}
+          >
+            {demoLoading ? "Loading demo…" : "Try the demo — Nina's Pet Salon"}
+          </button>
+          <p style={{ textAlign: "center", marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
+            No account needed — explore a fully seeded salon
+          </p>
+        </div>
+
+        <p style={{ textAlign: "center", marginTop: 8, fontSize: 13, color: "var(--ink-3)" }}>
           Don&apos;t have an account? <Link href="/register" style={{ color: "var(--acc)", fontWeight: 600 }}>Start free trial</Link>
         </p>
       </div>

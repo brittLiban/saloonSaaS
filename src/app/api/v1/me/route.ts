@@ -1,16 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { resolveApiKey, apiError } from "@/lib/api-auth";
+import { db } from "@/server/db";
 
-export async function GET() {
-  return NextResponse.json({
-    tenant: {
-      id: "demo_tenant",
-      name: "Nina's Pet Salon",
-      slug: "ninas-pet-salon",
+export async function GET(req: NextRequest) {
+  const auth = await resolveApiKey(req);
+  if (!auth) return apiError("Unauthorized", 401);
+
+  const tenant = await db.tenant.findUnique({
+    where: { id: auth.tenantId },
+    select: {
+      id: true, name: true, slug: true, timezone: true,
+      address: true, phone: true, email: true,
     },
-    api: {
-      version: "v1",
-      mode: "scaffold",
-      message: "Tenant-scoped API key authentication lands in Sprint 5.",
+  });
+
+  if (!tenant) return apiError("Tenant not found", 404);
+
+  return NextResponse.json({
+    data: {
+      tenantId: auth.tenantId,
+      keyId: auth.keyId,
+      scopes: auth.scopes,
+      tenant,
     },
   });
 }

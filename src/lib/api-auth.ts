@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import type { NextRequest } from "next/server";
-import { db } from "@/server/db";
 import { NextResponse } from "next/server";
+import { db } from "@/server/db";
 
 export interface ApiCtx {
   tenantId: string;
@@ -38,22 +38,24 @@ export async function resolveApiKey(request: NextRequest): Promise<ApiCtx | null
   return { tenantId: key.tenantId, scopes: key.scopes, keyId: key.id };
 }
 
-export function apiError(code: string, message: string, status = 400) {
-  return NextResponse.json({ error: code, message }, { status });
+export function apiError(message: string, status: number, details?: unknown) {
+  return NextResponse.json({ error: message, status, ...(details ? { details } : {}) }, { status });
 }
 
-export function requireScope(ctx: ApiCtx, scope: string) {
+export function requireScope(ctx: ApiCtx, scope: string): NextResponse | undefined {
   if (!ctx.scopes.includes(scope)) {
-    return apiError("forbidden", `Requires scope: ${scope}`, 403);
+    return apiError(`Requires scope: ${scope}`, 403);
   }
-  return null;
+  return undefined;
 }
 
-export function paginate<T extends { id: string }>(items: T[], limit: number) {
-  const hasMore = items.length > limit;
-  const data = hasMore ? items.slice(0, limit) : items;
+export function paginate(req: NextRequest) {
+  const page = Math.max(1, parseInt(req.nextUrl.searchParams.get("page") ?? "1"));
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.nextUrl.searchParams.get("pageSize") ?? "20")));
   return {
-    data,
-    nextCursor: hasMore ? data[data.length - 1]?.id ?? null : null,
+    page,
+    pageSize,
+    skip: (page - 1) * pageSize,
+    take: pageSize,
   };
 }

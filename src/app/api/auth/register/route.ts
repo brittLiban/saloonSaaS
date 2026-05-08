@@ -47,13 +47,13 @@ export async function POST(request: NextRequest) {
         timezone,
         themeTokens: { accent: "#ff5a1f", typography: "jakarta-serif", density: "regular", mode: "light" },
         businessHours: {
-          monday:    [{ opens: "09:00", closes: "18:00" }],
-          tuesday:   [{ opens: "09:00", closes: "18:00" }],
-          wednesday: [{ opens: "09:00", closes: "18:00" }],
-          thursday:  [{ opens: "09:00", closes: "18:00" }],
-          friday:    [{ opens: "09:00", closes: "18:00" }],
-          saturday:  [{ opens: "09:00", closes: "15:00" }],
-          sunday:    [],
+          "0": null,
+          "1": { open: "09:00", close: "18:00" },
+          "2": { open: "09:00", close: "18:00" },
+          "3": { open: "09:00", close: "18:00" },
+          "4": { open: "09:00", close: "18:00" },
+          "5": { open: "09:00", close: "18:00" },
+          "6": { open: "09:00", close: "15:00" },
         },
         bookingRules: { defaultBufferBeforeMinutes: 0, defaultBufferAfterMinutes: 15, allowOverlap: false },
       },
@@ -71,5 +71,5 @@ export async function POST(request: NextRequest) {
   session.email    = user.email;
   await session.save();
 
-  return NextResponse.json({ ok: true, redirect: "/app/today" }, { status: 201 });
+  return NextResponse.json({ ok: true, redirect: "/app/onboarding" }, { status: 201 });
 }

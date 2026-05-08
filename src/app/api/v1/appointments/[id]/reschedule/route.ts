@@ -1,14 +1,50 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { resolveApiKey, apiError, requireScope } from "@/lib/api-auth";
+import { db } from "@/server/db";
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+const Schema = z.object({
+  newStartsAt: z.coerce.date(),
+  reason: z.string().max(500).optional(),
+});
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await resolveApiKey(req);
+  if (!auth) return apiError("Unauthorized", 401);
+  const e = requireScope(auth, "appointments:write"); if (e) return e;
+
   const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const parsed = Schema.safeParse(body);
+  if (!parsed.success) return apiError("Validation error", 422, parsed.error.flatten());
 
-  return NextResponse.json(
-    {
-      appointmentId: id,
-      error: "not_implemented",
-      message: "Reschedule flow lands in Sprint 4 with conflict checking.",
+  const appt = await db.appointment.findFirst({
+    where: { id, tenantId: auth.tenantId },
+    include: { service: true },
+  });
+  if (!appt) return apiError("Not found", 404);
+  if (appt.status === "CANCELLED") return apiError("Cannot reschedule a cancelled appointment", 409);
+  if (appt.status === "COMPLETED") return apiError("Cannot reschedule a completed appointment", 409);
+
+  const { newStartsAt, reason } = parsed.data;
+  const newEndsAt = new Date(newStartsAt.getTime() + appt.service.durationMinutes * 60_000);
+
+  // Conflict check (excluding this appointment)
+  const conflict = await db.appointment.findFirst({
+    where: {
+      tenantId: auth.tenantId,
+      id: { not: id },
+      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      startsAt: { lt: newEndsAt },
+      endsAt: { gt: newStartsAt },
     },
-    { status: 501 },
-  );
+  });
+  if (conflict) return apiError("Time slot is not available", 409);
+
+  const updated = await db.appointment.update({
+    where: { id },
+    data: { startsAt: newStartsAt, endsAt: newEndsAt, rescheduleReason: reason },
+  });
+
+  return NextResponse.json({ data: updated });
 }

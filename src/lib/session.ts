@@ -1,4 +1,4 @@
-import type { IronSessionOptions } from "iron-session";
+import type { SessionOptions } from "iron-session";
 
 export interface SessionData {
   userId:   string;
@@ -8,7 +8,7 @@ export interface SessionData {
   email:    string;
 }
 
-export const sessionOptions: IronSessionOptions = {
+export const sessionOptions: SessionOptions = {
   password: process.env.SESSION_SECRET ?? "development-secret-please-change-in-production-32ch",
   cookieName: "gh_session",
   cookieOptions: {

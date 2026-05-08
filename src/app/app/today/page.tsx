@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
+import { StatusChanger } from "@/components/StatusChanger";
 
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -149,7 +150,7 @@ export default async function TodayPage() {
                 const { cls, label } = statusPill(appt.status);
                 const timeStr = appt.startsAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
                 return (
-                  <div key={appt.id} className="table-row" style={{ gridTemplateColumns: "72px 36px 1fr auto auto" }}>
+                  <div key={appt.id} className="table-row" style={{ gridTemplateColumns: "72px 36px 1fr auto auto auto" }}>
                     <span style={{ fontFamily: "var(--dash-mono)", fontSize: 12, color: "var(--d-ink-3)" }}>{timeStr}</span>
                     <span style={{ fontSize: 20 }}>{petEmoji(appt.animal.species)}</span>
                     <span>
@@ -157,6 +158,7 @@ export default async function TodayPage() {
                       <span style={{ color: "var(--d-ink-3)", fontSize: 12, marginLeft: 6 }}>{appt.service.name} · {fmtDuration(appt.service.durationMinutes)}</span>
                     </span>
                     <span className={cls}>{label}</span>
+                    <StatusChanger appointmentId={appt.id} status={appt.status} />
                     <span style={{ fontFamily: "var(--dash-mono)", fontSize: 13, fontWeight: 600 }}>{fmtMoney(appt.priceCents)}</span>
                   </div>
                 );

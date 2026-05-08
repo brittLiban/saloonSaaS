@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
+import { CalendarActions } from "@/components/CalendarActions";
 
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -26,6 +27,12 @@ function petEmoji(species: string) {
 export default async function CalendarPage() {
   const ctx = await getTenantCtx();
   if (!ctx) redirect("/login");
+
+  const services = await db.service.findMany({
+    where: { tenantId: ctx.tenantId, active: true },
+    select: { id: true, name: true, durationMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
+    orderBy: { name: "asc" },
+  });
 
   const now = new Date();
   const dow = now.getDay();
@@ -77,10 +84,7 @@ export default async function CalendarPage() {
         </div>
         <div className="topbar-actions">
           <Link href="/developers#availability" className="d-btn">API availability</Link>
-          <button className="d-btn d-btn-primary" type="button" onClick={undefined}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            New booking
-          </button>
+          <CalendarActions services={services} />
         </div>
       </header>
 
