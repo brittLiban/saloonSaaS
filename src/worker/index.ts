@@ -4,9 +4,16 @@ import { PrismaClient } from "@prisma/client";
 
 const db = new PrismaClient();
 
-const connection = { url: process.env.REDIS_URL ?? "redis://localhost:6379" };
+function redisConnection() {
+  const url = new URL(process.env.REDIS_URL ?? "redis://localhost:6379");
+  return {
+    host: url.hostname,
+    port: parseInt(url.port || "6379"),
+    password: url.password || undefined,
+  };
+}
 
-export const webhookQueue = new Queue("webhooks", { connection: { host: "localhost", port: 6379 } });
+export const webhookQueue = new Queue("webhooks", { connection: redisConnection() });
 
 const RETRY_DELAYS_MS = [
   60_000,          // 1 min
@@ -93,7 +100,7 @@ const webhookWorker = new Worker(
       await job.moveToDelayed(Date.now() + delay);
     }
   },
-  { connection: { host: "localhost", port: 6379 }, concurrency: 5 },
+  { connection: redisConnection(), concurrency: 5 },
 );
 
 const rebookingWorker = new Worker(
@@ -130,7 +137,7 @@ const rebookingWorker = new Worker(
       }
     }
   },
-  { connection: { host: "localhost", port: 6379 } },
+  { connection: redisConnection() },
 );
 
 async function main() {

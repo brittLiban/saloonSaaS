@@ -1,11 +1,19 @@
 #!/usr/bin/env sh
+# First-time setup: copy .env, then spin up the full stack.
+# Run: sh scripts/bootstrap
 set -eu
 
 if [ ! -f .env ]; then
   cp .env.example .env
-  echo "Created .env from .env.example. Review secrets before production use."
+  echo "Created .env from .env.example."
+  echo "  → Edit .env and set real passwords + SESSION_SECRET before going to production."
 fi
 
-npm install
-npm run prisma:generate
-echo "Bootstrap complete. Use 'docker compose up -d' for the self-contained stack."
+echo "Building images and starting the stack…"
+docker compose up -d --build
+
+echo ""
+echo "Stack is coming up. Migrations run automatically."
+echo "To seed demo data:  sh scripts/seed-demo"
+echo "To view logs:       docker compose logs -f web"
+echo "App will be live at http://localhost:8080"

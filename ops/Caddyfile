@@ -1,7 +1,3 @@
-{
-  auto_https off
-}
-
 :80 {
   encode gzip zstd
 

@@ -27,7 +27,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: minio/minio:RELEASE.2025-02-28T09-55-16Z
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
@@ -44,7 +44,7 @@ services:
       retries: 10
 
   minio-create-bucket:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    image: minio/mc:RELEASE.2025-02-15T10-36-16Z
     depends_on:
       minio:
         condition: service_healthy
@@ -56,14 +56,29 @@ services:
       exit 0;
       "
 
+  # One-shot: runs prisma migrate deploy then exits.
+  # web and worker wait for this to complete before starting.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-glasshound}:${POSTGRES_PASSWORD:-glasshound_dev_password}@postgres:5432/${POSTGRES_DB:-glasshound}?schema=public
+
   web:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runner
     restart: unless-stopped
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       minio-create-bucket:
@@ -89,14 +104,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
+      target: worker
     restart: unless-stopped
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
-    command: ["npm", "run", "worker"]
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-glasshound}:${POSTGRES_PASSWORD:-glasshound_dev_password}@postgres:5432/${POSTGRES_DB:-glasshound}?schema=public
@@ -109,8 +123,7 @@ services:
       web:
         condition: service_healthy
     ports:
-      - "${HTTP_PORT:-8080}:80"
-      - "${HTTPS_PORT:-8443}:443"
+      - "127.0.0.1:${HTTP_PORT:-8080}:80"
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-localhost}
     volumes:

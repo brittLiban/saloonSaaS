@@ -81,6 +81,7 @@
 /* ───── Base reset ───── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+html { overflow-x: clip; }
 body {
   font-family: var(--sans);
   font-size: 15px;
@@ -362,7 +363,7 @@ body.marketing::before {
 .hero-meta svg { color: var(--ok); }
 
 /* Hero art cards */
-.hero-art { position: relative; aspect-ratio: 4/5; max-width: 520px; margin-left: auto; }
+.hero-art { position: relative; width: 100%; max-width: 520px; aspect-ratio: 3/2; margin-left: auto; }
 .hero-card {
   position: absolute; background: var(--surface); border-radius: 18px;
   border: 1px solid rgba(20,20,20,0.06);
@@ -655,7 +656,10 @@ body.marketing::before {
 @media (max-width: 980px) {
   .hero-grid { grid-template-columns: 1fr; gap: 80px; }
   .hero h1 { font-size: 52px; }
-  .hero-art { max-width: 480px; margin: 0 auto; width: 100%; height: 560px; aspect-ratio: auto; }
+  .hero-art { width: min(100%, 480px); max-width: 480px; margin: 0 auto; height: 360px; aspect-ratio: auto; }
+  /* pull floating cards inside the container on tablet */
+  .hero-card-2 { left: 0; }
+  .hero-card-3 { right: 0; }
   .features-grid { grid-template-columns: 1fr 1fr; }
   .steps-grid { grid-template-columns: 1fr; gap: 36px; }
   .pricing-grid { grid-template-columns: 1fr; }
@@ -685,4 +689,7 @@ body.marketing::before {
   .mkt-section { padding: 64px 0; }
   .hero { padding: 50px 0 30px; }
   .kpi-grid { grid-template-columns: 1fr 1fr; }
+  /* keep all hero cards within bounds on small screens */
+  .hero-card-2 { left: 4%; transform: rotate(-2deg); }
+  .hero-card-3 { right: 4%; transform: rotate(2deg); }
 }

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createApiKey, revokeApiKey, ALL_SCOPES } from "@/server/actions/apikeys";
+import { createApiKey, revokeApiKey } from "@/server/actions/apikeys";
+import { ALL_SCOPES } from "@/lib/api-scopes";
 
 type ApiKeyRow = {
   id: string;

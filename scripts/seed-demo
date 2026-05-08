@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
+# Seed the demo account (Nina's Pet Salon) into the running Docker stack.
+# Run: sh scripts/seed-demo
 set -eu
 
-npm run prisma:deploy
-npm run seed
+echo "Seeding demo data into the running stack…"
+docker compose run --rm migrate npx tsx prisma/seed.ts
+echo "Done. Log in at http://localhost:8080 and click 'Try the demo'."

@@ -4,19 +4,11 @@ import { randomBytes, createHash } from "crypto";
 import { revalidatePath } from "next/cache";
 import { requireTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
+import { ALL_SCOPES } from "@/lib/api-scopes";
 
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
-
-export const ALL_SCOPES = [
-  "appointments:read",
-  "appointments:write",
-  "clients:read",
-  "clients:write",
-  "services:read",
-  "webhooks:write",
-];
 
 export async function createApiKey(
   name: string,
