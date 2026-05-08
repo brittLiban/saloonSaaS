@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Nina's Pet Salon — Software for solo groomers</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="home-styles.css" />
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<header class="nav">
+  <div class="wrap nav-row">
+    <div class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="17" rx="4.5" ry="3.4"/>
+          <circle cx="6" cy="10.5" r="1.8"/>
+          <circle cx="12" cy="8" r="1.8"/>
+          <circle cx="18" cy="10.5" r="1.8"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <span class="brand-name">Nina's</span>
+        <span class="brand-sub">Pet Salon</span>
+      </span>
+    </div>
+    <nav class="nav-links">
+      <a class="nav-link" href="#features">Features</a>
+      <a class="nav-link" href="#how">How it works</a>
+      <a class="nav-link" href="#pricing">Pricing</a>
+      <a class="nav-link" href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-cta">
+      <a href="Nina's Pet Salon.html" class="btn btn-ghost">Sign in</a>
+      <a href="Nina's Pet Salon.html" class="btn btn-primary">
+        Open dashboard
+        <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 9h10M10 4l5 5-5 5"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="hero-eyebrow">
+        <span class="hero-eyebrow-tag">New</span>
+        AI receptionist now answers your phone
+      </span>
+      <h1>Run your<br/>grooming salon<br/>like <em>clockwork.</em></h1>
+      <p class="hero-lede">
+        Booking, payments, client records, and an AI receptionist that picks up the phone while you're with the dog. Built for the solo owner who wears every apron.
+      </p>
+      <div class="hero-cta">
+        <a href="Nina's Pet Salon.html" class="btn btn-orange btn-lg">
+          Open the dashboard
+          <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 9h10M10 4l5 5-5 5"/></svg>
+        </a>
+        <a href="#how" class="btn btn-lg">See how it works</a>
+      </div>
+      <div class="hero-meta">
+        <span class="hero-meta-item">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>
+          14-day free trial
+        </span>
+        <span class="hero-meta-item">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>
+          No credit card
+        </span>
+        <span class="hero-meta-item">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>
+          Cancel any time
+        </span>
+      </div>
+    </div>
+
+    <!-- Hero visual -->
+    <div class="hero-art">
+      <div class="hero-card hero-card-1">
+        <div class="hero-card-1-h">
+          <div class="hero-card-1-title">Today · Thu May 7</div>
+          <span class="hero-card-1-pill">On track</span>
+        </div>
+        <div class="hero-mini-row">
+          <div class="hero-mini-time">9:00</div>
+          <div class="hero-mini-pet b1">🐶</div>
+          <div>
+            <div class="hero-mini-name">Bella</div>
+            <div class="hero-mini-svc">Full groom</div>
+          </div>
+          <div class="hero-mini-price">$85</div>
+        </div>
+        <div class="hero-mini-row">
+          <div class="hero-mini-time">10:30</div>
+          <div class="hero-mini-pet b3">🐕</div>
+          <div>
+            <div class="hero-mini-name">Mochi</div>
+            <div class="hero-mini-svc">Bath &amp; tidy</div>
+          </div>
+          <div class="hero-mini-price">$55</div>
+        </div>
+        <div class="hero-mini-row">
+          <div class="hero-mini-time">12:30</div>
+          <div class="hero-mini-pet b4">🐩</div>
+          <div>
+            <div class="hero-mini-name">Atlas</div>
+            <div class="hero-mini-svc">De-shed</div>
+          </div>
+          <div class="hero-mini-price">$95</div>
+        </div>
+        <div class="hero-mini-row">
+          <div class="hero-mini-time">2:15</div>
+          <div class="hero-mini-pet b2">🐾</div>
+          <div>
+            <div class="hero-mini-name">Pixel</div>
+            <div class="hero-mini-svc">Puppy cut</div>
+          </div>
+          <div class="hero-mini-price">$70</div>
+        </div>
+      </div>
+
+      <div class="hero-card hero-card-2">
+        <div class="hero-card-2-l">Today's revenue</div>
+        <div class="hero-card-2-v">$842</div>
+        <div class="hero-card-2-d">↑ 18% vs last Thu</div>
+      </div>
+
+      <div class="hero-card hero-card-3">
+        <div class="hero-mini-pet b1">🐶</div>
+        <div>
+          <div class="hero-card-3-name">Bella's mom</div>
+          <div class="hero-card-3-msg">AI booked · 6 wk</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap logos">
+    <div class="logos-l">Trusted by 1,200+ solo groomers</div>
+    <div class="logos-row">
+      <div class="logo-item">Pawsworth &amp; Co</div>
+      <div class="logo-item sans">Muddy Boots</div>
+      <div class="logo-item">The Wash House</div>
+      <div class="logo-item sans">Tail &amp; Trim</div>
+      <div class="logo-item">Glasshound Grooming</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section id="features" class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">Features</span>
+      <h2 class="section-h2">Everything for the chair, <em>nothing</em> for the meeting room.</h2>
+      <p class="section-lede">Most salon software is built for chains with twelve stylists. This one's built for you, alone, between baths.</p>
+    </div>
+
+    <div class="features">
+      <article class="feat">
+        <div class="feat-icon b1">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="5" width="18" height="15" rx="2"/>
+            <path d="M3 10h18M8 3v4M16 3v4"/>
+          </svg>
+        </div>
+        <h3 class="feat-h">Calendar that thinks ahead</h3>
+        <p class="feat-p">Drag to reschedule. Color blocks by service. Buffer time between dogs auto-baked in. See your whole week without losing today.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-icon b6">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5c0 8 6 14 14 14l2-3-4-2-2 2c-2-1-4-3-5-5l2-2-2-4z"/>
+          </svg>
+        </div>
+        <h3 class="feat-h">AI Receptionist</h3>
+        <p class="feat-p">Picks up the phone, checks your real availability, books appointments, and texts confirmations. While you're elbow-deep in suds.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-icon b2">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="6" width="18" height="13" rx="2"/>
+            <path d="M3 10h18M8 14h3"/>
+          </svg>
+        </div>
+        <h3 class="feat-h">Square payments, built in</h3>
+        <p class="feat-p">Connect your Square account once. Tap, dip, or Tap-to-Pay on the iPhone you already own. Invoices auto-match the booking.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-icon b3">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7"/>
+            <path d="M3 4v5h5"/>
+          </svg>
+        </div>
+        <h3 class="feat-h">Re-booking on autopilot</h3>
+        <p class="feat-p">Knows that Bella is due every six weeks. Surfaces the dogs slipping past their cadence. One tap to text and book.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-icon b4">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="9" r="3.5"/>
+            <path d="M5 20c1-4 4-6 7-6s6 2 7 6"/>
+          </svg>
+        </div>
+        <h3 class="feat-h">A real client memory</h3>
+        <p class="feat-p">Allergies, behaviors, the specific shampoo they like. Photos before and after. Every dog, every owner, every preference — right where you'd look first.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-icon b5">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 17l5-5 4 4 8-8"/>
+            <path d="M14 8h6v6"/>
+          </svg>
+        </div>
+        <h3 class="feat-h">Money, plain and simple</h3>
+        <p class="feat-p">Today, this week, this month — what came in, what's outstanding, what your average ticket looks like. No spreadsheets, no surprises.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section id="how" class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">How it works</span>
+      <h2 class="section-h2">From "I should get organized" to <em>booked solid for May.</em></h2>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3 class="step-h">Bring your clients</h3>
+        <p class="step-p">Drop in a CSV, type them in, or let the AI grab them off voicemails. Whatever's least painful.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3 class="step-h">Set your week</h3>
+        <p class="step-p">Hours, services, prices, time between dogs. Block off lunch and a real coffee break. The calendar respects all of it.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3 class="step-h">Just groom</h3>
+        <p class="step-p">Bookings come in. Reminders go out. Payments settle. You touch the app twice a day and it's still ahead of you.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== QUOTE ===== -->
+<section class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="quote">
+      <blockquote class="quote-body">
+        I used to lose two dogs a week to missed callbacks. The AI receptionist alone paid for the whole thing in a month — and the calendar finally stopped lying to me.
+      </blockquote>
+      <div class="quote-foot">
+        <div class="quote-avatar"></div>
+        <div>
+          <div class="quote-name">Nina Reyes</div>
+          <div class="quote-role">Owner · Federal Way, WA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRICING ===== -->
+<section id="pricing" class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head center">
+      <span class="section-eyebrow">Pricing</span>
+      <h2 class="section-h2">One plan. Priced for <em>one chair.</em></h2>
+      <p class="section-lede">No per-stylist fees. No "Pro tier" gating the basics. The calendar, payments, and the AI receptionist are all in.</p>
+    </div>
+
+    <div class="pricing">
+      <article class="price">
+        <div class="price-name">Starter</div>
+        <div class="price-tagline">Just the calendar.</div>
+        <div class="price-amount">
+          <span class="price-amount-n">$0</span>
+          <span class="price-amount-u">/mo</span>
+        </div>
+        <div class="price-billed">Free forever</div>
+        <ul>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Calendar &amp; bookings</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Up to 50 clients</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Basic invoices</li>
+        </ul>
+        <div class="price-cta"><a href="Nina's Pet Salon.html" class="btn" style="width:100%;justify-content:center">Start free</a></div>
+      </article>
+
+      <article class="price feat">
+        <span class="price-tag">Most groomers pick this</span>
+        <div class="price-name">Solo Pro</div>
+        <div class="price-tagline">Everything you need to run the shop alone.</div>
+        <div class="price-amount">
+          <span class="price-amount-n">$39</span>
+          <span class="price-amount-u">/mo</span>
+        </div>
+        <div class="price-billed">Billed monthly · 14-day free trial</div>
+        <ul>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Unlimited clients &amp; pets</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>AI Receptionist (200 calls/mo)</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Square payments &amp; invoices</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Auto re-booking texts</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Photo notes &amp; care history</li>
+        </ul>
+        <div class="price-cta"><a href="Nina's Pet Salon.html" class="btn btn-primary" style="width:100%;justify-content:center">Try 14 days free</a></div>
+      </article>
+
+      <article class="price">
+        <div class="price-name">Growth</div>
+        <div class="price-tagline">For when you bring on a second pair of hands.</div>
+        <div class="price-amount">
+          <span class="price-amount-n">$79</span>
+          <span class="price-amount-u">/mo</span>
+        </div>
+        <div class="price-billed">Billed monthly</div>
+        <ul>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Everything in Solo Pro</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>2 staff calendars</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Unlimited AI calls</li>
+          <li><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 8.5l3 3 7-7"/></svg>Marketing automations</li>
+        </ul>
+        <div class="price-cta"><a href="Nina's Pet Salon.html" class="btn" style="width:100%;justify-content:center">Choose Growth</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section id="faq" class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head center">
+      <span class="section-eyebrow">FAQ</span>
+      <h2 class="section-h2">Questions, briefly answered.</h2>
+    </div>
+    <div class="faq">
+      <div class="faq-item open" data-faq>
+        <button class="faq-q" type="button">
+          <span>Do I need a separate phone for the AI receptionist?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">No. We forward your existing line so the AI picks up only when you can't. You keep your number.</div>
+      </div>
+      <div class="faq-item" data-faq>
+        <button class="faq-q" type="button">
+          <span>Will it work with my Square reader?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Yes. Connect your Square account in Settings and we'll route invoices through your existing reader, terminal, or Tap-to-Pay.</div>
+      </div>
+      <div class="faq-item" data-faq>
+        <button class="faq-q" type="button">
+          <span>Can I import my clients from a spreadsheet?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Drop in a CSV — owners on one tab, pets on another. We'll match them and let you fix anything weird before it lands.</div>
+      </div>
+      <div class="faq-item" data-faq>
+        <button class="faq-q" type="button">
+          <span>What if a customer wants to reschedule themselves?</span>
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">The AI receptionist can move and cancel, with the same rules you'd give a human at the front desk. You're always the final say.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="cta-band">
+      <h2 class="cta-band-h">Open the dashboard. <em>Today.</em></h2>
+      <p class="cta-band-p">Free for 14 days. No card. Cancel by closing the tab.</p>
+      <div class="cta-band-buttons">
+        <a href="Nina's Pet Salon.html" class="btn btn-orange btn-lg">
+          Get started
+          <svg viewBox="0 0 18 18" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 9h10M10 4l5 5-5 5"/></svg>
+        </a>
+        <a href="#features" class="btn btn-lg">Take the tour</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-row">
+      <div>
+        <div class="brand">
+          <span class="brand-mark">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <ellipse cx="12" cy="17" rx="4.5" ry="3.4"/>
+              <circle cx="6" cy="10.5" r="1.8"/>
+              <circle cx="12" cy="8" r="1.8"/>
+              <circle cx="18" cy="10.5" r="1.8"/>
+            </svg>
+          </span>
+          <span class="brand-text">
+            <span class="brand-name">Nina's</span>
+            <span class="brand-sub">Pet Salon</span>
+          </span>
+        </div>
+        <p class="footer-blurb">Software for the solo groomer. Built in Federal Way, WA, between the Goldendoodle and the Husky.</p>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-h">Product</div>
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="Nina's Pet Salon.html">Open dashboard</a></li>
+          <li><a href="#">Changelog</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-h">Company</div>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Press</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-h">Resources</div>
+        <ul>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#">Help center</a></li>
+          <li><a href="#">API docs</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Nina's Pet Salon Software</span>
+      <div class="footer-bottom-links">
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+        <a href="#">Status</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // FAQ toggle
+  document.querySelectorAll('[data-faq]').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
+  });
+</script>
+
+</body>
+</html>
