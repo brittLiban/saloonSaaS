@@ -179,7 +179,8 @@ export default async function CalendarPage({
           <CalendarNav view="week" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} />
         </header>
         <div className="dash-content" style={{ paddingBottom: 40 }}>
-          <div style={{ background: "#fff", borderRadius: 18, border: "1px solid var(--d-line-2)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+          <div style={{ minWidth: 560, background: "#fff", borderRadius: 18, border: "1px solid var(--d-line-2)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
             {/* Header row */}
             <div style={{ display: "grid", gridTemplateColumns: "56px repeat(7, 1fr)", borderBottom: "1px solid var(--d-line)" }}>
               <div />
@@ -210,6 +211,7 @@ export default async function CalendarPage({
                 <TimeGridCol key={i} appts={apptsByDay[i]} today={isToday(day)} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} />
               ))}
             </div>
+          </div>
           </div>
         </div>
       </>

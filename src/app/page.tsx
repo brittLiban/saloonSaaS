@@ -86,7 +86,6 @@ export default function MarketingPage() {
           <nav className="nav-links">
             <a className="nav-link" href="#features">Features</a>
             <a className="nav-link" href="#how">How it works</a>
-            <a className="nav-link" href="#pricing">Pricing</a>
             <a className="nav-link" href="#faq">FAQ</a>
           </nav>
           <div className="nav-cta">
@@ -225,67 +224,6 @@ export default function MarketingPage() {
         </div>
       </section>
 
-      {/* ── PRICING ── */}
-      <section id="pricing" className="mkt-section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="section-head center">
-            <span className="section-eyebrow">Pricing</span>
-            <h2 className="section-h2">One plan. Priced for <em>one chair.</em></h2>
-            <p className="section-lede">No per-stylist fees. No &quot;Pro tier&quot; gating the basics. The calendar, payments, and the AI receptionist are all in.</p>
-          </div>
-          <div className="pricing-grid">
-            {/* Starter */}
-            <article className="price-card">
-              <div className="price-name">Starter</div>
-              <div className="price-tagline">Just the calendar.</div>
-              <div className="price-amount"><span className="price-amount-n">$0</span><span className="price-amount-u">/mo</span></div>
-              <div className="price-billed">Free forever</div>
-              <ul>
-                {["Calendar & bookings", "Up to 50 clients", "Basic invoices"].map(f => (
-                  <li key={f}><CheckIcon />{f}</li>
-                ))}
-              </ul>
-              <div className="price-cta">
-                <Link href="/register" className="btn" style={{ width: "100%", justifyContent: "center" }}>Start free</Link>
-              </div>
-            </article>
-
-            {/* Solo Pro */}
-            <article className="price-card featured">
-              <span className="price-tag">Most groomers pick this</span>
-              <div className="price-name">Solo Pro</div>
-              <div className="price-tagline">Everything you need to run the shop alone.</div>
-              <div className="price-amount"><span className="price-amount-n">$39</span><span className="price-amount-u">/mo</span></div>
-              <div className="price-billed">Billed monthly · 14-day free trial</div>
-              <ul>
-                {["Unlimited clients & pets", "AI Receptionist (200 calls/mo)", "Square payments & invoices", "Auto re-booking texts", "Photo notes & care history"].map(f => (
-                  <li key={f}><CheckIcon />{f}</li>
-                ))}
-              </ul>
-              <div className="price-cta">
-                <Link href="/register" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>Try 14 days free</Link>
-              </div>
-            </article>
-
-            {/* Growth */}
-            <article className="price-card">
-              <div className="price-name">Growth</div>
-              <div className="price-tagline">For when you bring on a second pair of hands.</div>
-              <div className="price-amount"><span className="price-amount-n">$79</span><span className="price-amount-u">/mo</span></div>
-              <div className="price-billed">Billed monthly</div>
-              <ul>
-                {["Everything in Solo Pro", "2 staff calendars", "Unlimited AI calls", "n8n automation API", "Marketing automations"].map(f => (
-                  <li key={f}><CheckIcon />{f}</li>
-                ))}
-              </ul>
-              <div className="price-cta">
-                <Link href="/register" className="btn" style={{ width: "100%", justifyContent: "center" }}>Choose Growth</Link>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
       {/* ── FAQ ── */}
       <section id="faq" className="mkt-section" style={{ paddingTop: 0 }}>
         <div className="wrap">
@@ -342,7 +280,6 @@ export default function MarketingPage() {
               <div className="footer-col-h">Product</div>
               <ul>
                 <li><a href="#features">Features</a></li>
-                <li><a href="#pricing">Pricing</a></li>
                 <li><Link href="/app/today">Open demo</Link></li>
                 <li><Link href="/developers">API docs</Link></li>
               </ul>

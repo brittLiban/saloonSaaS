@@ -74,7 +74,10 @@ export function DashSidebar({ name, role }: { name: string; role: string }) {
     return pathname === href || (href !== "/app" && pathname.startsWith(href));
   }
 
+  const mobileNavTabs = [workspaceTabs[0], workspaceTabs[1], workspaceTabs[2], workspaceTabs[4], workspaceTabs[5]];
+
   return (
+    <>
     <aside className="sidebar">
       <Link href="/app/today" className="sidebar-brand" style={{ textDecoration: "none" }}>
         <div className="sidebar-brand-mark"><PawIcon /></div>
@@ -125,5 +128,15 @@ export function DashSidebar({ name, role }: { name: string; role: string }) {
         </div>
       </div>
     </aside>
+
+    <nav className="mobile-bottom-nav">
+      {mobileNavTabs.map((tab) => (
+        <Link key={tab.key} href={tab.href} className={`mobile-nav-item${isActive(tab.href) ? " active" : ""}`}>
+          {tab.icon}
+          <span>{tab.label}</span>
+        </Link>
+      ))}
+    </nav>
+    </>
   );
 }
