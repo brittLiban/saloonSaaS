@@ -27,6 +27,7 @@ export function SettingsClient({ apiKeys }: { apiKeys: ApiKeyRow[] }) {
   const [newToken, setNewToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [formError, setFormError] = useState<string | null>(null);
 
   // New key form state
   const [keyName, setKeyName] = useState("");
@@ -40,13 +41,18 @@ export function SettingsClient({ apiKeys }: { apiKeys: ApiKeyRow[] }) {
 
   function handleGenerate() {
     if (!keyName.trim() || selectedScopes.length === 0) return;
+    setFormError(null);
     startTransition(async () => {
-      const result = await createApiKey(keyName.trim(), selectedScopes);
-      setNewToken(result.token);
-      setShowForm(false);
-      setKeyName("");
-      setSelectedScopes(["appointments:read", "appointments:write"]);
-      router.refresh();
+      try {
+        const result = await createApiKey(keyName.trim(), selectedScopes);
+        setNewToken(result.token);
+        setShowForm(false);
+        setKeyName("");
+        setSelectedScopes(["appointments:read", "appointments:write"]);
+        router.refresh();
+      } catch (err) {
+        setFormError(err instanceof Error ? err.message : "Failed to generate key. Check server logs.");
+      }
     });
   }
 
@@ -173,8 +179,13 @@ export function SettingsClient({ apiKeys }: { apiKeys: ApiKeyRow[] }) {
               </div>
             </div>
 
+            {formError && (
+              <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 8, background: "#fff1f0", border: "1px solid #ffa39e", color: "#c0392b", fontSize: 13 }}>
+                {formError}
+              </div>
+            )}
             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              <button className="d-btn" onClick={() => setShowForm(false)}>Cancel</button>
+              <button className="d-btn" onClick={() => { setShowForm(false); setFormError(null); }}>Cancel</button>
               <button
                 className="d-btn d-btn-primary"
                 onClick={handleGenerate}
