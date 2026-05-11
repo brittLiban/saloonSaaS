@@ -51,7 +51,8 @@ export function SettingsClient({ apiKeys }: { apiKeys: ApiKeyRow[] }) {
         setSelectedScopes(["appointments:read", "appointments:write"]);
         router.refresh();
       } catch (err) {
-        setFormError(err instanceof Error ? err.message : "Failed to generate key. Check server logs.");
+        console.error("[createApiKey]", err);
+        setFormError(err instanceof Error ? err.message : String(err) ?? "Failed to generate key.");
       }
     });
   }

@@ -742,14 +742,30 @@ textarea.d-input {
   .dash-main { grid-column: 1; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
   .panel-grid { grid-template-columns: 1fr; }
 
-  /* Topbar: hide center search, tighten padding */
+  /* Topbar: stack title + scrollable actions row */
   .topbar {
-    grid-template-columns: 1fr auto;
-    padding: 8px 14px;
-    min-height: 56px;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 14px 8px;
+    gap: 6px;
+    min-height: auto;
   }
+  .topbar-breadcrumb { display: none; }
+  .topbar-sub { display: none; }
+  .topbar-title { font-size: 19px; }
   .topbar-center { display: none; }
+  .topbar-actions {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+  }
+  .topbar-actions::-webkit-scrollbar { display: none; }
+  .topbar-actions > * { flex-shrink: 0; }
   .dash-content { padding: 12px 14px; }
 
   /* Mobile bottom nav */
