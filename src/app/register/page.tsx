@@ -46,7 +46,7 @@ export default function RegisterPage() {
               <ellipse cx="12" cy="17" rx="4.5" ry="3.4"/><circle cx="6" cy="10.5" r="1.8"/><circle cx="12" cy="8" r="1.8"/><circle cx="18" cy="10.5" r="1.8"/>
             </svg>
           </span>
-          <span className="brand-text"><span className="brand-name">Glasshound</span></span>
+          <span className="brand-text"><span className="brand-name">Paw Reception</span></span>
         </Link>
         <h1>Start your free trial</h1>
         <p>14 days free. No credit card required.</p>

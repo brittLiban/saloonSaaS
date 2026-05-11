@@ -58,7 +58,7 @@ const faqs = [
   { q: "Will it work with my Square reader?", a: "Yes. Connect your Square account in Settings and we'll route invoices through your existing reader, terminal, or Tap-to-Pay." },
   { q: "Can I import my clients from a spreadsheet?", a: "Drop in a CSV — owners on one tab, pets on another. We'll match them and let you fix anything weird before it lands." },
   { q: "What if a customer wants to reschedule themselves?", a: "The AI receptionist can move and cancel, with the same rules you'd give a human at the front desk. You're always the final say." },
-  { q: "Does it work for multi-staff salons?", a: "Glasshound supports multiple staff calendars and role-based access. The Growth plan includes 2 staff members." },
+  { q: "Does it work for multi-staff salons?", a: "Paw Reception supports multiple staff calendars and role-based access. The Growth plan includes 2 staff members." },
 ];
 
 export default function MarketingPage() {
@@ -80,8 +80,7 @@ export default function MarketingPage() {
               </svg>
             </span>
             <span className="brand-text">
-              <span className="brand-name">Nina&apos;s</span>
-              <span className="brand-sub">Pet Salon</span>
+              <span className="brand-name">Paw Reception</span>
             </span>
           </Link>
           <nav className="nav-links">
@@ -163,16 +162,6 @@ export default function MarketingPage() {
           </div>
         </div>
 
-        <div className="wrap logos">
-          <div className="logos-l">Trusted by 1,200+ solo groomers</div>
-          <div className="logos-row">
-            <div className="logo-item">Pawsworth &amp; Co</div>
-            <div className="logo-item sans">Muddy Boots</div>
-            <div className="logo-item">The Wash House</div>
-            <div className="logo-item sans">Tail &amp; Trim</div>
-            <div className="logo-item">Glasshound Grooming</div>
-          </div>
-        </div>
       </section>
 
       {/* ── FEATURES ── */}
@@ -228,8 +217,8 @@ export default function MarketingPage() {
             <div className="quote-foot">
               <div className="quote-avatar" />
               <div>
-                <div className="quote-name">Nina Reyes</div>
-                <div className="quote-role">Owner · Federal Way, WA</div>
+                <div className="quote-name">Sarah M.</div>
+                <div className="quote-role">Solo groomer · Seattle, WA</div>
               </div>
             </div>
           </div>
@@ -344,11 +333,10 @@ export default function MarketingPage() {
                   </svg>
                 </span>
                 <span className="brand-text">
-                  <span className="brand-name">Nina&apos;s</span>
-                  <span className="brand-sub">Pet Salon</span>
+                  <span className="brand-name">Paw Reception</span>
                 </span>
               </Link>
-              <p className="footer-blurb">Software for the solo groomer. Built in Federal Way, WA, between the Goldendoodle and the Husky.</p>
+              <p className="footer-blurb">Software for the solo groomer. Built for the owner who wears every apron.</p>
             </div>
             <div className="footer-col">
               <div className="footer-col-h">Product</div>
@@ -377,7 +365,7 @@ export default function MarketingPage() {
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© 2026 Glasshound Software Inc.</span>
+            <span>© 2026 Paw Reception</span>
             <div className="footer-bottom-links">
               <a href="#">Privacy</a>
               <a href="#">Terms</a>

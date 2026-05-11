@@ -14,7 +14,7 @@ export const webhookEvents = [
 export const openApiDocument = {
   openapi: "3.1.0",
   info: {
-    title: "Glasshound API",
+    title: "Paw Reception API",
     version: "0.1.0",
     description: "Planned n8n-ready API for the multi-tenant pet salon SaaS.",
   },

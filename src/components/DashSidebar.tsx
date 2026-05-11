@@ -79,7 +79,7 @@ export function DashSidebar({ name, role }: { name: string; role: string }) {
       <Link href="/app/today" className="sidebar-brand" style={{ textDecoration: "none" }}>
         <div className="sidebar-brand-mark"><PawIcon /></div>
         <div>
-          <div className="sidebar-brand-name">Glasshound</div>
+          <div className="sidebar-brand-name">Paw Reception</div>
           <div className="sidebar-brand-sub">Pet Salon</div>
         </div>
       </Link>

@@ -56,7 +56,7 @@ export default function LoginPage() {
             </svg>
           </span>
           <span className="brand-text">
-            <span className="brand-name">Glasshound</span>
+            <span className="brand-name">Paw Reception</span>
           </span>
         </Link>
         <h1>Welcome back</h1>
@@ -96,7 +96,7 @@ export default function LoginPage() {
               transition: "opacity 0.15s",
             }}
           >
-            {demoLoading ? "Loading demo…" : "Try the demo — Nina's Pet Salon"}
+            {demoLoading ? "Loading demo…" : "Try the demo →"}
           </button>
           <p style={{ textAlign: "center", marginTop: 6, fontSize: 12, color: "var(--ink-3)" }}>
             No account needed — explore a fully seeded salon
