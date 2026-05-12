@@ -25,16 +25,17 @@ export async function GET(req: NextRequest) {
   const date = new Date(`${dateStr}T00:00:00`);
   const dayOfWeek = date.getDay();
 
-  // Parse business hours from tenant JSON (stored as { 0: null, 1: { open: "09:00", close: "17:00" }, ... })
-  const bh = tenant.businessHours as Record<string, { open: string; close: string } | null>;
-  const dayHours = bh[String(dayOfWeek)];
+  // businessHours shape: { monday: [{ opens: "07:30", closes: "18:00" }], sunday: [], ... }
+  const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const bh = tenant.businessHours as Record<string, Array<{ opens: string; closes: string }>>;
+  const dayWindows = bh[DAY_NAMES[dayOfWeek]];
 
-  if (!dayHours) {
+  if (!dayWindows || dayWindows.length === 0) {
     return NextResponse.json({ data: { date: dateStr, serviceId, slots: [], reason: "Closed" } });
   }
 
-  const [openH, openM] = dayHours.open.split(":").map(Number);
-  const [closeH, closeM] = dayHours.close.split(":").map(Number);
+  const [openH, openM] = dayWindows[0].opens.split(":").map(Number);
+  const [closeH, closeM] = dayWindows[0].closes.split(":").map(Number);
 
   const dayOpen = new Date(date);
   dayOpen.setHours(openH, openM, 0, 0);
