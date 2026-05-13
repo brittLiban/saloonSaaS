@@ -3,6 +3,8 @@ export const ALL_SCOPES = [
   "appointments:write",
   "clients:read",
   "clients:write",
+  "animals:read",
+  "animals:write",
   "services:read",
   "webhooks:write",
 ] as const;
