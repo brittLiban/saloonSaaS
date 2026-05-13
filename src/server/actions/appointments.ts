@@ -128,3 +128,50 @@ export async function updateAppointmentStatus(raw: unknown) {
   revalidatePath("/app/bookings");
   await writeAudit({ tenantId: ctx.tenantId, actorUserId: ctx.userId, source: "DASHBOARD", action: `appointment.${status.toLowerCase()}`, entityType: "appointment", entityId: id, metadata: { status } });
 }
+
+export async function rescheduleAppointment(raw: unknown) {
+  const ctx = await requireTenantCtx();
+  const schema = z.object({
+    id: z.string().min(1),
+    newStartsAt: z.coerce.date(),
+  });
+  const { id, newStartsAt } = schema.parse(raw);
+
+  const appt = await db.appointment.findFirstOrThrow({
+    where: { id, tenantId: ctx.tenantId },
+    include: { service: true },
+  });
+
+  if (appt.status === "COMPLETED" || appt.status === "CANCELLED") {
+    throw new Error("Cannot reschedule a completed or cancelled appointment");
+  }
+
+  const newEndsAt = new Date(newStartsAt.getTime() + appt.service.durationMinutes * 60_000);
+
+  // Conflict check (excluding this appointment)
+  const conflict = await db.appointment.findFirst({
+    where: {
+      tenantId: ctx.tenantId,
+      id: { not: id },
+      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      AND: [
+        { startsAt: { lt: newEndsAt } },
+        { endsAt: { gt: newStartsAt } },
+      ],
+    },
+  });
+
+  if (conflict) {
+    throw new Error("Time slot is not available");
+  }
+
+  await db.appointment.update({
+    where: { id },
+    data: { startsAt: newStartsAt, endsAt: newEndsAt },
+  });
+
+  revalidatePath("/app/today");
+  revalidatePath("/app/calendar");
+  revalidatePath("/app/bookings");
+  await writeAudit({ tenantId: ctx.tenantId, actorUserId: ctx.userId, source: "DASHBOARD", action: "appointment.rescheduled", entityType: "appointment", entityId: id });
+}

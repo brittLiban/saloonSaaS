@@ -112,6 +112,7 @@ export function TimeGridColClient({
         const top = minuteTop(startMin);
         const height = Math.max(dur * PX_PER_MIN - 3, 28);
         const color = animalColor(a.animal.id);
+        const isCompleted = a.status === "COMPLETED";
         return (
           <div
             key={a.id}
@@ -122,6 +123,7 @@ export function TimeGridColClient({
               overflow: "hidden", zIndex: 2, cursor: "pointer",
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
               transition: "transform 0.2s, box-shadow 0.2s",
+              opacity: isCompleted ? 0.6 : 1,
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.transform = "scale(1.02)";
@@ -132,6 +134,11 @@ export function TimeGridColClient({
               (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
             }}
           >
+            {isCompleted && (
+              <div style={{ position: "absolute", top: 4, right: 6, fontSize: 14, lineHeight: 1 }}>
+                ✓
+              </div>
+            )}
             <div style={{ fontSize: 10, fontWeight: 600, color: color.text, opacity: 0.72, lineHeight: 1.4, marginBottom: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {fmt12(start, timezone)} · {fmt12(end, timezone)}
             </div>

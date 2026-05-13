@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { updateAppointmentStatus } from "@/server/actions/appointments";
+import { RescheduleModal } from "@/components/RescheduleModal";
 
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -91,6 +92,7 @@ export function AppointmentDetailModal({
 }: AppointmentDetailProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showReschedule, setShowReschedule] = useState(false);
   const nextActions = getNextActions(appointment.status);
   const statusColor = getStatusColor(appointment.status);
 
@@ -175,6 +177,21 @@ export function AppointmentDetailModal({
 
         {/* Content */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {showReschedule ? (
+            <RescheduleModal
+              appointmentId={appointment.id}
+              currentStartsAt={appointment.startsAt}
+              serviceId={appointment.service.id}
+              serviceName={appointment.service.name}
+              serviceDurationMinutes={appointment.service.durationMinutes}
+              timezone={timezone}
+              onSuccess={() => {
+                setShowReschedule(false);
+                onClose();
+              }}
+            />
+          ) : (
+            <>
           {/* Customer Info */}
           <div style={{ paddingBottom: 10, borderBottom: "1px solid var(--d-line)" }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -246,6 +263,45 @@ export function AppointmentDetailModal({
 
           {/* Actions */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {appointment.status === "COMPLETED" && (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--d-ink-4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
+                  Oops! Change status:
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+                  <button
+                    className="d-btn"
+                    style={{
+                      padding: "8px 10px",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: "#dbeafe",
+                      borderColor: "#93c5fd",
+                      color: "#0c2d6b",
+                    }}
+                    disabled={isPending}
+                    onClick={() => handleAction("CHECKED_IN")}
+                  >
+                    {isPending ? "…" : "Checked In"}
+                  </button>
+                  <button
+                    className="d-btn"
+                    style={{
+                      padding: "8px 10px",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: "#fef3c7",
+                      borderColor: "#fcd34d",
+                      color: "#78350f",
+                    }}
+                    disabled={isPending}
+                    onClick={() => handleAction("CONFIRMED")}
+                  >
+                    {isPending ? "…" : "Confirmed"}
+                  </button>
+                </div>
+              </>
+            )}
             {nextActions.length > 0 && nextActions.map((action) => (
               <button
                 key={action.nextStatus}
@@ -263,55 +319,58 @@ export function AppointmentDetailModal({
                 {isPending ? "…" : action.label}
               </button>
             ))}
-            <button
-              className="d-btn"
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                fontSize: 13,
-                fontWeight: 600,
-                background: "#dbeafe",
-                borderColor: "#93c5fd",
-                color: "#0c2d6b",
-              }}
-              disabled={isPending || appointment.status === "COMPLETED" || appointment.status === "CANCELLED"}
-              onClick={() => {
-                // TODO: Open reschedule modal or navigate to booking page with this appointment
-                alert("Reschedule feature coming soon! Contact support for now.");
-              }}
-            >
-              Reschedule
-            </button>
-            <button
-              className="d-btn"
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                fontSize: 13,
-                fontWeight: 600,
-                background: "#fee2e2",
-                borderColor: "#fecaca",
-                color: "#7f1d1d",
-              }}
-              disabled={isPending || appointment.status === "COMPLETED" || appointment.status === "CANCELLED"}
-              onClick={() => {
-                setError(null);
-                startTransition(async () => {
-                  try {
-                    await updateAppointmentStatus({ id: appointment.id, status: "CANCELLED", reason: "Cancelled from calendar" });
-                    onClose();
-                  } catch (e: unknown) {
-                    setError(e instanceof Error ? e.message : "Failed to cancel.");
-                  }
-                });
-              }}
-            >
-              {isPending ? "…" : "Cancel"}
-            </button>
+            {appointment.status !== "COMPLETED" && appointment.status !== "CANCELLED" && (
+              <>
+                <button
+                  className="d-btn"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    background: "#dbeafe",
+                    borderColor: "#93c5fd",
+                    color: "#0c2d6b",
+                  }}
+                  disabled={isPending}
+                  onClick={() => setShowReschedule(true)}
+                >
+                  Reschedule
+                </button>
+                <button
+                  className="d-btn"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    background: "#fee2e2",
+                    borderColor: "#fecaca",
+                    color: "#7f1d1d",
+                  }}
+                  disabled={isPending}
+                  onClick={() => {
+                    setError(null);
+                    startTransition(async () => {
+                      try {
+                        await updateAppointmentStatus({ id: appointment.id, status: "CANCELLED", reason: "Cancelled from calendar" });
+                        onClose();
+                      } catch (e: unknown) {
+                        setError(e instanceof Error ? e.message : "Failed to cancel.");
+                      }
+                    });
+                  }}
+                >
+                  {isPending ? "…" : "Cancel"}
+                </button>
+              </>
+            )}
           </div>
 
           {error && (
             <div style={{ fontSize: 12, color: "var(--acc)", marginTop: 4, padding: "6px 8px", background: "rgba(0,0,0,0.05)", borderRadius: 4 }}>{error}</div>
+          )}
+            </>
           )}
         </div>
       </div>
