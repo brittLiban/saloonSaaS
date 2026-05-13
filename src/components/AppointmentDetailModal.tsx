@@ -8,6 +8,15 @@ function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
+function fmtTime(iso: string | Date, timezone: string) {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return d.toLocaleTimeString("en-US", {
+    timeZone: timezone,
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function fmtDateTime(iso: string | Date, timezone: string) {
   const d = typeof iso === "string" ? new Date(iso) : iso;
   return d.toLocaleString("en-US", {
@@ -15,8 +24,6 @@ function fmtDateTime(iso: string | Date, timezone: string) {
     weekday: "short",
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
 }
 
@@ -109,9 +116,9 @@ export function AppointmentDetailModal({
         zIndex: 2000,
         background: "rgba(22, 22, 22, 0.55)",
         display: "flex",
-        alignItems: "flex-start",
+        alignItems: "center",
         justifyContent: "center",
-        padding: "72px 16px 40px",
+        padding: "12px 12px",
         overflowY: "auto",
       }}
       onClick={onClose}
@@ -120,27 +127,29 @@ export function AppointmentDetailModal({
         className="glass-card"
         style={{
           width: "100%",
-          maxWidth: 480,
-          padding: 28,
+          maxWidth: 420,
+          maxHeight: "calc(100vh - 24px)",
+          padding: "20px",
           position: "relative",
           flexShrink: 0,
+          overflowY: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
-          <div>
-            <div style={{ fontFamily: "var(--dash-serif)", fontSize: 21, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "var(--dash-serif)", fontSize: 18, marginBottom: 6, lineHeight: 1.2 }}>
               {appointment.animal.name}'s Appointment
             </div>
             <div
               style={{
                 display: "inline-block",
-                padding: "4px 10px",
-                borderRadius: 6,
+                padding: "3px 8px",
+                borderRadius: 4,
                 background: statusColor.bg,
                 color: statusColor.text,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: 600,
               }}
             >
@@ -156,7 +165,8 @@ export function AppointmentDetailModal({
               color: "var(--d-ink-3)",
               fontSize: 20,
               lineHeight: 1,
-              padding: "2px 4px",
+              padding: "0 6px",
+              flexShrink: 0,
             }}
           >
             ✕
@@ -164,41 +174,41 @@ export function AppointmentDetailModal({
         </div>
 
         {/* Content */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Customer Info */}
-          <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--d-line)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ paddingBottom: 10, borderBottom: "1px solid var(--d-line)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Customer
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>
               {appointment.client.name}
             </div>
             {appointment.client.phone && (
-              <div style={{ fontSize: 14, color: "var(--d-ink-3)" }}>
-                📞 {appointment.client.phone}
+              <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
+                {appointment.client.phone}
               </div>
             )}
           </div>
 
           {/* Pet Info */}
-          <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--d-line)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ paddingBottom: 10, borderBottom: "1px solid var(--d-line)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Pet
             </div>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ fontSize: 32, lineHeight: 1 }}>{petEmoji(appointment.animal.species)}</div>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <div style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{petEmoji(appointment.animal.species)}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
                   {appointment.animal.name}
                 </div>
                 {appointment.animal.breed && (
-                  <div style={{ fontSize: 13, color: "var(--d-ink-3)", marginBottom: 3 }}>
+                  <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginBottom: 1 }}>
                     {appointment.animal.breed}
                   </div>
                 )}
                 {appointment.animal.weightLbs && (
-                  <div style={{ fontSize: 13, color: "var(--d-ink-3)" }}>
-                    {appointment.animal.weightLbs} lbs
+                  <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
+                    {Number(appointment.animal.weightLbs).toFixed(1)} lbs
                   </div>
                 )}
               </div>
@@ -206,57 +216,102 @@ export function AppointmentDetailModal({
           </div>
 
           {/* Service & Time */}
-          <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--d-line)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ paddingBottom: 10, borderBottom: "1px solid var(--d-line)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Service & Time
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
               {appointment.service.name}
             </div>
-            <div style={{ fontSize: 13, color: "var(--d-ink-3)", marginBottom: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginBottom: 3 }}>
               📅 {fmtDateTime(appointment.startsAt, timezone)}
             </div>
-            <div style={{ fontSize: 13, color: "var(--d-ink-3)" }}>
-              ⏱️ {appointment.service.durationMinutes} minutes
+            <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginBottom: 3 }}>
+              🕐 {fmtTime(appointment.startsAt, timezone)} - {fmtTime(appointment.endsAt, timezone)}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
+              ⏱️ {appointment.service.durationMinutes} min
             </div>
           </div>
 
           {/* Price */}
-          <div style={{ paddingBottom: 16, borderBottom: "1px solid var(--d-line)" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <div style={{ paddingBottom: 10, borderBottom: "1px solid var(--d-line)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--d-ink-4)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Price
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--acc)" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--acc)" }}>
               {fmtMoney(appointment.priceCents)}
             </div>
           </div>
 
           {/* Actions */}
-          {nextActions.length > 0 && (
-            <div>
-              <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-                {nextActions.map((action) => (
-                  <button
-                    key={action.nextStatus}
-                    className="d-btn"
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      ...(action.style ?? {}),
-                    }}
-                    disabled={isPending}
-                    onClick={() => handleAction(action.nextStatus)}
-                  >
-                    {isPending ? "…" : action.label}
-                  </button>
-                ))}
-              </div>
-              {error && (
-                <div style={{ fontSize: 12, color: "var(--acc)", marginTop: 8 }}>{error}</div>
-              )}
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {nextActions.length > 0 && nextActions.map((action) => (
+              <button
+                key={action.nextStatus}
+                className="d-btn"
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  ...(action.style ?? {}),
+                }}
+                disabled={isPending}
+                onClick={() => handleAction(action.nextStatus)}
+              >
+                {isPending ? "…" : action.label}
+              </button>
+            ))}
+            <button
+              className="d-btn"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                fontSize: 13,
+                fontWeight: 600,
+                background: "#dbeafe",
+                borderColor: "#93c5fd",
+                color: "#0c2d6b",
+              }}
+              disabled={isPending || appointment.status === "COMPLETED" || appointment.status === "CANCELLED"}
+              onClick={() => {
+                // TODO: Open reschedule modal or navigate to booking page with this appointment
+                alert("Reschedule feature coming soon! Contact support for now.");
+              }}
+            >
+              Reschedule
+            </button>
+            <button
+              className="d-btn"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                fontSize: 13,
+                fontWeight: 600,
+                background: "#fee2e2",
+                borderColor: "#fecaca",
+                color: "#7f1d1d",
+              }}
+              disabled={isPending || appointment.status === "COMPLETED" || appointment.status === "CANCELLED"}
+              onClick={() => {
+                setError(null);
+                startTransition(async () => {
+                  try {
+                    await updateAppointmentStatus({ id: appointment.id, status: "CANCELLED", reason: "Cancelled from calendar" });
+                    onClose();
+                  } catch (e: unknown) {
+                    setError(e instanceof Error ? e.message : "Failed to cancel.");
+                  }
+                });
+              }}
+            >
+              {isPending ? "…" : "Cancel"}
+            </button>
+          </div>
+
+          {error && (
+            <div style={{ fontSize: 12, color: "var(--acc)", marginTop: 4, padding: "6px 8px", background: "rgba(0,0,0,0.05)", borderRadius: 4 }}>{error}</div>
           )}
         </div>
       </div>
