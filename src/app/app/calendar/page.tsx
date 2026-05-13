@@ -2,10 +2,22 @@ import { redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { CalendarNav } from "@/components/CalendarNav";
+import {
+  addDaysToDateString,
+  addMonthsToMonthStartDateString,
+  currentDateStringInZone,
+  dateStringToUtcDate,
+  formatDateInZone,
+  formatLocalDateString,
+  formatTimeInZone,
+  minutesInZone,
+  nextZonedDayUtc,
+  startOfZonedDayUtc,
+} from "@/lib/timezone";
 
 /* ── constants ──────────────────────────────────── */
 const HOUR_START  = 8;
-const HOUR_END    = 19;
+const HOUR_END_DEFAULT = 19;
 const PX_PER_HOUR = 64;
 const PX_PER_MIN  = PX_PER_HOUR / 60;
 const TOP_PAD     = 20;
@@ -23,43 +35,55 @@ function animalColor(animalId: string) {
   const hash = animalId.split("").reduce((n, c) => n + c.charCodeAt(0), 0);
   return PALETTE[hash % PALETTE.length];
 }
-function fmt12(date: Date) {
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase().replace(" ", "");
+function fmt12(date: Date, timezone: string) {
+  return formatTimeInZone(date, timezone, true);
 }
-function isToday(d: Date) {
-  const t = new Date();
-  return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+function isTodayDateString(dateStr: string, timezone: string) {
+  return dateStr === currentDateStringInZone(timezone);
 }
-function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function dayNumber(dateStr: string) {
+  return dateStringToUtcDate(dateStr).getUTCDate();
 }
 function hourTop(h: number) { return TOP_PAD + (h - HOUR_START) * PX_PER_HOUR; }
 function minuteTop(totalMin: number) { return TOP_PAD + (totalMin - HOUR_START * 60) * PX_PER_MIN; }
 
 /* ── date helpers ─────────────────────────────── */
-function getWeekStart(offset: number) {
-  const now = new Date();
-  const dow = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
+function getWeekStartDateString(offset: number, timezone: string) {
+  const today = currentDateStringInZone(timezone);
+  const dow = dateStringToUtcDate(today).getUTCDay();
+  return addDaysToDateString(today, -(dow === 0 ? 6 : dow - 1) + offset * 7);
 }
-function getDayStart(offset: number) {
-  const now = new Date();
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
-  return d;
+function getDayDateString(offset: number, timezone: string) {
+  return addDaysToDateString(currentDateStringInZone(timezone), offset);
 }
-function getMonthStart(offset: number) {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + offset, 1);
+function getMonthStartDateString(offset: number, timezone: string) {
+  const today = currentDateStringInZone(timezone);
+  const currentMonth = dateStringToUtcDate(today);
+  currentMonth.setUTCDate(1);
+  return addMonthsToMonthStartDateString(currentMonth.toISOString().slice(0, 10), offset);
+}
+
+function gridConfig(appts: Appt[], timezone: string) {
+  const latestEndMin = appts.reduce(
+    (latest, appt) => Math.max(latest, minutesInZone(appt.endsAt, timezone)),
+    HOUR_END_DEFAULT * 60,
+  );
+  const hourEnd = Math.max(HOUR_END_DEFAULT, Math.ceil(latestEndMin / 60));
+  const nowMin = minutesInZone(new Date(), timezone);
+
+  return {
+    hours: Array.from({ length: hourEnd - HOUR_START + 1 }, (_, i) => HOUR_START + i),
+    gridH: (hourEnd - HOUR_START) * PX_PER_HOUR + TOP_PAD,
+    nowTop: TOP_PAD + (nowMin - HOUR_START * 60) * PX_PER_MIN,
+    showNow: nowMin >= HOUR_START * 60 && nowMin <= hourEnd * 60,
+  };
 }
 
 type Appt = Awaited<ReturnType<typeof fetchAppts>>[0];
 async function fetchAppts(tenantId: string, from: Date, to: Date) {
   const { db } = await import("@/server/db");
   return db.appointment.findMany({
-    where: { tenantId, startsAt: { gte: from, lte: to }, status: { notIn: ["CANCELLED", "NO_SHOW"] } },
+    where: { tenantId, startsAt: { gte: from, lt: to }, status: { notIn: ["CANCELLED", "NO_SHOW"] } },
     include: { animal: true, client: true, service: true },
     orderBy: { startsAt: "asc" },
   });
@@ -73,6 +97,7 @@ function TimeGridCol({
   showNow,
   gridH,
   hours,
+  timezone,
 }: {
   appts: Appt[];
   today: boolean;
@@ -80,6 +105,7 @@ function TimeGridCol({
   showNow: boolean;
   gridH: number;
   hours: number[];
+  timezone: string;
 }) {
   return (
     <div style={{
@@ -101,9 +127,9 @@ function TimeGridCol({
       )}
       {appts.map((a) => {
         const start = new Date(a.startsAt);
-        const startMin = start.getHours() * 60 + start.getMinutes();
-        const dur = a.service.durationMinutes ?? 60;
-        const end = new Date(start.getTime() + dur * 60_000);
+        const end = new Date(a.endsAt);
+        const startMin = minutesInZone(start, timezone);
+        const dur = Math.max(1, (end.getTime() - start.getTime()) / 60_000);
         const top = minuteTop(startMin);
         const height = Math.max(dur * PX_PER_MIN - 3, 28);
         const color = animalColor(a.animal.id);
@@ -115,7 +141,7 @@ function TimeGridCol({
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
           }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: color.text, opacity: 0.72, lineHeight: 1.4, marginBottom: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {fmt12(start)} · {fmt12(end)}
+              {fmt12(start, timezone)} · {fmt12(end, timezone)}
             </div>
             {height > 38 && (
               <div style={{ fontSize: 14, fontWeight: 800, color: color.text, lineHeight: 1.2, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -149,28 +175,26 @@ export default async function CalendarPage({
   const dayOffset   = parseInt(params.day   ?? "0", 10) || 0;
   const monthOffset = parseInt(params.month ?? "0", 10) || 0;
 
-  const services = await db.service.findMany({
-    where: { tenantId: ctx.tenantId, active: true },
-    select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
-    orderBy: { name: "asc" },
-  });
-
-  const now    = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const nowTop = TOP_PAD + (nowMin - HOUR_START * 60) * PX_PER_MIN;
-  const showNow = nowMin >= HOUR_START * 60 && nowMin <= HOUR_END * 60;
-  const hours  = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
-  const gridH  = (HOUR_END - HOUR_START) * PX_PER_HOUR + TOP_PAD;
+  const [tenant, services] = await Promise.all([
+    db.tenant.findUnique({ where: { id: ctx.tenantId }, select: { timezone: true } }),
+    db.service.findMany({
+      where: { tenantId: ctx.tenantId, active: true },
+      select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  const timezone = tenant?.timezone ?? "UTC";
 
   /* ── WEEK view ── */
   if (view === "week") {
-    const monday = getWeekStart(weekOffset);
-    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23, 59, 59, 999);
-    const appointments = await fetchAppts(ctx.tenantId, monday, sunday);
-    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
-    const apptsByDay = days.map((d) => appointments.filter((a) => isSameDay(new Date(a.startsAt), d)));
-    const midWeek = new Date(monday); midWeek.setDate(monday.getDate() + 3);
-    const label = midWeek.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const monday = getWeekStartDateString(weekOffset, timezone);
+    const nextMonday = addDaysToDateString(monday, 7);
+    const appointments = await fetchAppts(ctx.tenantId, startOfZonedDayUtc(monday, timezone), startOfZonedDayUtc(nextMonday, timezone));
+    const { hours, gridH, nowTop, showNow } = gridConfig(appointments, timezone);
+    const days = Array.from({ length: 7 }, (_, i) => addDaysToDateString(monday, i));
+    const apptsByDay = days.map((d) => appointments.filter((a) => formatDateInZone(a.startsAt, timezone) === d));
+    const midWeek = addDaysToDateString(monday, 3);
+    const label = formatLocalDateString(midWeek, { month: "long", year: "numeric" });
     const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
     return (
@@ -185,14 +209,14 @@ export default async function CalendarPage({
             <div style={{ display: "grid", gridTemplateColumns: "56px repeat(7, 1fr)", borderBottom: "1px solid var(--d-line)" }}>
               <div />
               {days.map((day, i) => {
-                const today = isToday(day);
+                const today = isTodayDateString(day, timezone);
                 return (
                   <div key={i} style={{ padding: "14px 0 12px", textAlign: "center", borderLeft: i === 0 ? "none" : "1px solid var(--d-line)" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", color: today ? "var(--acc)" : "var(--d-ink-3)", marginBottom: 6 }}>{dayNames[i]}</div>
                     {today ? (
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--acc)", color: "#fff", fontFamily: "var(--dash-serif)", fontSize: 20, fontWeight: 400, display: "grid", placeItems: "center", margin: "0 auto" }}>{day.getDate()}</div>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--acc)", color: "#fff", fontFamily: "var(--dash-serif)", fontSize: 20, fontWeight: 400, display: "grid", placeItems: "center", margin: "0 auto" }}>{dayNumber(day)}</div>
                     ) : (
-                      <div style={{ fontFamily: "var(--dash-serif)", fontSize: 24, fontWeight: 400, color: "var(--d-ink)", lineHeight: 1 }}>{day.getDate()}</div>
+                      <div style={{ fontFamily: "var(--dash-serif)", fontSize: 24, fontWeight: 400, color: "var(--d-ink)", lineHeight: 1 }}>{dayNumber(day)}</div>
                     )}
                   </div>
                 );
@@ -208,7 +232,7 @@ export default async function CalendarPage({
                 ))}
               </div>
               {days.map((day, i) => (
-                <TimeGridCol key={i} appts={apptsByDay[i]} today={isToday(day)} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} />
+                <TimeGridCol key={i} appts={apptsByDay[i]} today={isTodayDateString(day, timezone)} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} timezone={timezone} />
               ))}
             </div>
           </div>
@@ -220,11 +244,11 @@ export default async function CalendarPage({
 
   /* ── DAY view ── */
   if (view === "day") {
-    const day = getDayStart(dayOffset);
-    const dayEnd = new Date(day); dayEnd.setHours(23, 59, 59, 999);
-    const appointments = await fetchAppts(ctx.tenantId, day, dayEnd);
-    const label = day.toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric" });
-    const today = isToday(day);
+    const day = getDayDateString(dayOffset, timezone);
+    const appointments = await fetchAppts(ctx.tenantId, startOfZonedDayUtc(day, timezone), nextZonedDayUtc(day, timezone));
+    const { hours, gridH, nowTop, showNow } = gridConfig(appointments, timezone);
+    const label = formatLocalDateString(day, { weekday: "short", month: "long", day: "numeric" });
+    const today = isTodayDateString(day, timezone);
 
     return (
       <>
@@ -238,12 +262,12 @@ export default async function CalendarPage({
               <div />
               <div style={{ padding: "14px 0 12px", textAlign: "center", borderLeft: "1px solid var(--d-line)" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", color: today ? "var(--acc)" : "var(--d-ink-3)", marginBottom: 6 }}>
-                  {day.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()}
+                  {formatLocalDateString(day, { weekday: "short" }).toUpperCase()}
                 </div>
                 {today ? (
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--acc)", color: "#fff", fontFamily: "var(--dash-serif)", fontSize: 24, fontWeight: 400, display: "grid", placeItems: "center", margin: "0 auto" }}>{day.getDate()}</div>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--acc)", color: "#fff", fontFamily: "var(--dash-serif)", fontSize: 24, fontWeight: 400, display: "grid", placeItems: "center", margin: "0 auto" }}>{dayNumber(day)}</div>
                 ) : (
-                  <div style={{ fontFamily: "var(--dash-serif)", fontSize: 32, fontWeight: 400, color: "var(--d-ink)", lineHeight: 1 }}>{day.getDate()}</div>
+                  <div style={{ fontFamily: "var(--dash-serif)", fontSize: 32, fontWeight: 400, color: "var(--d-ink)", lineHeight: 1 }}>{dayNumber(day)}</div>
                 )}
               </div>
             </div>
@@ -256,7 +280,7 @@ export default async function CalendarPage({
                   </div>
                 ))}
               </div>
-              <TimeGridCol appts={appointments} today={today} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} />
+              <TimeGridCol appts={appointments} today={today} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} timezone={timezone} />
             </div>
           </div>
         </div>
@@ -265,21 +289,18 @@ export default async function CalendarPage({
   }
 
   /* ── MONTH view ── */
-  const monthStart = getMonthStart(monthOffset);
-  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0, 23, 59, 59, 999);
-  const appointments = await fetchAppts(ctx.tenantId, monthStart, monthEnd);
-  const label = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthStart = getMonthStartDateString(monthOffset, timezone);
+  const nextMonthStart = addMonthsToMonthStartDateString(monthStart, 1);
+  const appointments = await fetchAppts(ctx.tenantId, startOfZonedDayUtc(monthStart, timezone), startOfZonedDayUtc(nextMonthStart, timezone));
+  const label = formatLocalDateString(monthStart, { month: "long", year: "numeric" });
 
   // Build calendar grid: start from the Monday of the week containing the 1st
-  const firstDow = monthStart.getDay(); // 0=Sun
-  const gridStart = new Date(monthStart);
-  gridStart.setDate(1 - (firstDow === 0 ? 6 : firstDow - 1));
+  const firstDow = dateStringToUtcDate(monthStart).getUTCDay(); // 0=Sun
+  const gridStart = addDaysToDateString(monthStart, -(firstDow === 0 ? 6 : firstDow - 1));
 
-  const cells: Date[] = [];
+  const cells: string[] = [];
   for (let i = 0; i < 42; i++) {
-    const d = new Date(gridStart);
-    d.setDate(gridStart.getDate() + i);
-    cells.push(d);
+    cells.push(addDaysToDateString(gridStart, i));
   }
   const dayNames = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -305,9 +326,9 @@ export default async function CalendarPage({
           {Array.from({ length: 6 }, (_, row) => (
             <div key={row} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: row === 5 ? "none" : "1px solid var(--d-line)" }}>
               {cells.slice(row * 7, row * 7 + 7).map((cell, col) => {
-                const inMonth = cell.getMonth() === monthStart.getMonth();
-                const today   = isToday(cell);
-                const dayAppts = appointments.filter((a) => isSameDay(new Date(a.startsAt), cell));
+                const inMonth = cell.slice(0, 7) === monthStart.slice(0, 7);
+                const today = isTodayDateString(cell, timezone);
+                const dayAppts = appointments.filter((a) => formatDateInZone(a.startsAt, timezone) === cell);
 
                 return (
                   <div key={col} style={{
@@ -323,13 +344,13 @@ export default async function CalendarPage({
                           background: "var(--acc)", color: "#fff",
                           fontSize: 13, fontWeight: 700,
                           display: "grid", placeItems: "center",
-                        }}>{cell.getDate()}</div>
+                        }}>{dayNumber(cell)}</div>
                       ) : (
                         <div style={{
                           fontSize: 13, fontWeight: inMonth ? 700 : 400,
                           color: inMonth ? "var(--d-ink)" : "var(--d-ink-4)",
                           width: 28, height: 28, display: "grid", placeItems: "center",
-                        }}>{cell.getDate()}</div>
+                        }}>{dayNumber(cell)}</div>
                       )}
                     </div>
 
@@ -344,7 +365,7 @@ export default async function CalendarPage({
                             fontSize: 11, fontWeight: 600,
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                           }}>
-                            {fmt12(new Date(a.startsAt))} {a.animal.name}
+                            {fmt12(new Date(a.startsAt), timezone)} {a.animal.name}
                           </div>
                         );
                       })}

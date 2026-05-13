@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { resolveApiKey, apiError } from "@/lib/api-auth";
 import { db } from "@/server/db";
 import { computeAvailability } from "@/domain/availability";
+import {
+  dayOfWeekFromDateString,
+  getBusinessHourPeriods,
+  isValidDateString,
+  nextZonedDayUtc,
+  startOfZonedDayUtc,
+  zonedDateTimeToUtc,
+} from "@/lib/timezone";
 
 export async function GET(req: NextRequest) {
   const auth = await resolveApiKey(req);
@@ -12,6 +20,7 @@ export async function GET(req: NextRequest) {
 
   if (!serviceId) return apiError("serviceId is required", 422);
   if (!dateStr) return apiError("date is required (YYYY-MM-DD)", 422);
+  if (!isValidDateString(dateStr)) return apiError("date must be a valid YYYY-MM-DD value", 422);
 
   const service = await db.service.findFirst({
     where: { id: serviceId, tenantId: auth.tenantId, active: true },
@@ -22,32 +31,33 @@ export async function GET(req: NextRequest) {
   if (!tenant) return apiError("Tenant not found", 404);
 
   const tz = tenant.timezone ?? "UTC";
-  const date = new Date(`${dateStr}T00:00:00`);
-  const dayOfWeek = date.getDay();
+  const dayOfWeek = dayOfWeekFromDateString(dateStr);
+  const periods = getBusinessHourPeriods(tenant.businessHours, dayOfWeek);
 
-  // businessHours shape: { monday: [{ opens: "07:30", closes: "18:00" }], sunday: [], ... }
-  const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  const bh = tenant.businessHours as Record<string, Array<{ opens: string; closes: string }>>;
-  const dayWindows = bh[DAY_NAMES[dayOfWeek]];
-
-  if (!dayWindows || dayWindows.length === 0) {
+  if (periods.length === 0) {
     return NextResponse.json({ data: { date: dateStr, serviceId, slots: [], reason: "Closed" } });
   }
 
-  const [openH, openM] = dayWindows[0].opens.split(":").map(Number);
-  const [closeH, closeM] = dayWindows[0].closes.split(":").map(Number);
+  const openWindows = periods
+    .map((period) => ({
+      startsAt: zonedDateTimeToUtc(dateStr, period.opens, tz),
+      endsAt: zonedDateTimeToUtc(dateStr, period.closes, tz),
+    }))
+    .filter((window) => window.endsAt > window.startsAt);
 
-  const dayOpen = new Date(date);
-  dayOpen.setHours(openH, openM, 0, 0);
-  const dayClose = new Date(date);
-  dayClose.setHours(closeH, closeM, 0, 0);
+  if (openWindows.length === 0) {
+    return NextResponse.json({ data: { date: dateStr, serviceId, slots: [], reason: "Closed" } });
+  }
+
+  const dayStart = startOfZonedDayUtc(dateStr, tz);
+  const dayEnd = nextZonedDayUtc(dateStr, tz);
 
   // Existing appointments that day
   const existing = await db.appointment.findMany({
     where: {
       tenantId: auth.tenantId,
       status: { notIn: ["CANCELLED", "NO_SHOW"] },
-      startsAt: { gte: dayOpen, lt: dayClose },
+      AND: [{ startsAt: { lt: dayEnd } }, { endsAt: { gt: dayStart } }],
     },
     select: { startsAt: true, endsAt: true },
   });
@@ -57,8 +67,7 @@ export async function GET(req: NextRequest) {
     where: {
       tenantId: auth.tenantId,
       type: "blocked",
-      startsAt: { gte: dayOpen },
-      endsAt: { lte: dayClose },
+      AND: [{ startsAt: { lt: dayEnd } }, { endsAt: { gt: dayStart } }],
     },
     select: { startsAt: true, endsAt: true },
   });
@@ -66,11 +75,11 @@ export async function GET(req: NextRequest) {
   const totalSlotMins = service.durationMinutes + service.bufferBeforeMinutes + service.bufferAfterMinutes;
 
   const slots = computeAvailability({
-    from: dayOpen,
-    to: dayClose,
+    from: dayStart,
+    to: dayEnd,
     slotMinutes: totalSlotMins,
     stepMinutes: 15,
-    openWindows: [{ startsAt: dayOpen, endsAt: dayClose }],
+    openWindows,
     busyWindows: [...existing, ...blocked],
   });
 

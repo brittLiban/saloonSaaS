@@ -3,6 +3,7 @@
 import { requireTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { addMinutes, overlaps, type TimeWindow } from "@/domain/availability";
+import { dayOfWeekFromDateString, getBusinessHourPeriods, zonedDateTimeToUtc } from "@/lib/timezone";
 
 export type SlimService = {
   id: string;
@@ -25,28 +26,6 @@ export type TimeSlot = {
   endsAt: string;
   available: boolean;
 };
-
-const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
-type DayPeriod = { opens: string; closes: string };
-type BusinessHours = Record<string, DayPeriod[]>;
-
-/**
- * Returns the UTC Date that corresponds to a given local time in a timezone.
- * e.g. "07:30" in "America/Los_Angeles" on "2026-05-08" → 14:30 UTC
- */
-function toUTC(dateStr: string, timeStr: string, timezone: string): Date {
-  const midnightUTC = new Date(`${dateStr}T00:00:00Z`);
-
-  // Get the timezone offset at that point in time
-  const utcMs = new Date(midnightUTC.toLocaleString("en-US", { timeZone: "UTC" })).getTime();
-  const tzMs  = new Date(midnightUTC.toLocaleString("en-US", { timeZone: timezone })).getTime();
-  const offsetMs = utcMs - tzMs; // positive = west of UTC (e.g. PDT = +7h)
-
-  const [h, m] = timeStr.split(":").map(Number);
-  const timeMs = (h * 60 + m) * 60_000;
-
-  return new Date(midnightUTC.getTime() + offsetMs + timeMs);
-}
 
 export async function fetchServicesForBooking(): Promise<SlimService[]> {
   const ctx = await requireTenantCtx();
@@ -87,16 +66,13 @@ export async function fetchAvailableSlots(serviceId: string, dateStr: string): P
   if (!tenant) return [];
 
   const timezone = tenant.timezone ?? "America/Los_Angeles";
-  const dayOfWeek = new Date(`${dateStr}T12:00:00Z`).getDay(); // use noon UTC to avoid DST edge
-
-  const bh = tenant.businessHours as BusinessHours;
-  const dayName = DAY_NAMES[dayOfWeek];
-  const periods = bh[dayName] ?? [];
+  const dayOfWeek = dayOfWeekFromDateString(dateStr);
+  const periods = getBusinessHourPeriods(tenant.businessHours, dayOfWeek);
   if (periods.length === 0) return [];
 
   const period = periods[0];
-  const dayOpen  = toUTC(dateStr, period.opens,  timezone);
-  const dayClose = toUTC(dateStr, period.closes, timezone);
+  const dayOpen  = zonedDateTimeToUtc(dateStr, period.opens,  timezone);
+  const dayClose = zonedDateTimeToUtc(dateStr, period.closes, timezone);
 
   // Fetch existing appointments that touch this day
   const existing = await db.appointment.findMany({
