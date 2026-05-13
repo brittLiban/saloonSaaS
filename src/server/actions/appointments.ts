@@ -5,13 +5,19 @@ import { revalidatePath } from "next/cache";
 import { requireTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { writeAudit } from "@/lib/audit";
+import { appointmentLineCreates, resolveAppointmentComposition } from "@/server/appointment-composition";
+import { appointmentDurationMinutes } from "@/lib/appointment-summary";
 
 const CreateSchema = z.object({
   clientId: z.string().min(1),
   animalId: z.string().min(1),
-  serviceId: z.string().min(1),
+  serviceId: z.string().min(1).optional(),
+  serviceIds: z.array(z.string().min(1)).optional(),
+  addOnIds: z.array(z.string().min(1)).default([]),
+  addOns: z.array(z.string().min(1)).default([]),
   startsAt: z.coerce.date(),
   durationMinutes: z.number().int().positive().optional(),
+  priceCents: z.number().int().nonnegative().optional(),
   force: z.boolean().optional().default(false),
 });
 
@@ -35,18 +41,21 @@ export async function createAppointment(raw: unknown): Promise<{ ok: true } | { 
   const ctx = await requireTenantCtx();
   const data = CreateSchema.parse(raw);
 
-  const service = await db.service.findFirstOrThrow({
-    where: { id: data.serviceId, tenantId: ctx.tenantId, active: true },
+  const composition = await resolveAppointmentComposition({
+    tenantId: ctx.tenantId,
+    serviceId: data.serviceId,
+    serviceIds: data.serviceIds,
+    addOnIds: data.addOnIds,
+    addOns: data.addOns,
+    durationMinutes: data.durationMinutes,
+    priceCents: data.priceCents,
   });
 
-  const endsAt = new Date(
-    data.startsAt.getTime() + 
-    (data.durationMinutes ?? service.durationMinutes) * 60_000
-  );
+  const endsAt = new Date(data.startsAt.getTime() + composition.durationMinutes * 60_000);
 
-  // Effective blocked window including this service's buffers
-  const effectiveStart = new Date(data.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
-  const effectiveEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
+  // Effective blocked window including selected services' buffers.
+  const effectiveStart = new Date(data.startsAt.getTime() - composition.bufferBeforeMinutes * 60_000);
+  const effectiveEnd = new Date(endsAt.getTime() + composition.bufferAfterMinutes * 60_000);
 
   if (!data.force) {
     // Check for any appointments that overlap with our effective window
@@ -83,12 +92,14 @@ export async function createAppointment(raw: unknown): Promise<{ ok: true } | { 
       tenantId: ctx.tenantId,
       clientId: data.clientId,
       animalId: data.animalId,
-      serviceId: data.serviceId,
+      serviceId: composition.primaryService.id,
       startsAt: data.startsAt,
       endsAt,
-      priceCents: service.priceCents,
+      durationMinutes: composition.durationMinutes,
+      priceCents: composition.priceCents,
       source: "DASHBOARD",
       status: "CONFIRMED",
+      ...appointmentLineCreates(composition),
     },
   });
 
@@ -146,7 +157,8 @@ export async function rescheduleAppointment(raw: unknown) {
     throw new Error("Cannot reschedule a completed or cancelled appointment");
   }
 
-  const newEndsAt = new Date(newStartsAt.getTime() + appt.service.durationMinutes * 60_000);
+  const duration = appointmentDurationMinutes(appt);
+  const newEndsAt = new Date(newStartsAt.getTime() + duration * 60_000);
 
   // Conflict check (excluding this appointment)
   const conflict = await db.appointment.findFirst({

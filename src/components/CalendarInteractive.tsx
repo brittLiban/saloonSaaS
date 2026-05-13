@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AppointmentDetailModal } from "@/components/AppointmentDetailModal";
+import { AppointmentDetailModal, type AppointmentDetailStatus } from "@/components/AppointmentDetailModal";
+import { appointmentDurationMinutes, appointmentServiceLabel } from "@/lib/appointment-summary";
 
 /* ── constants ──────────────────────────────────── */
 const HOUR_START  = 8;
@@ -52,7 +53,7 @@ type Appt = {
   id: string;
   startsAt: string | Date;
   endsAt: string | Date;
-  status: string;
+  status: AppointmentDetailStatus;
   priceCents: number;
   client: { id: string; name: string; phone: string | null };
   animal: {
@@ -60,9 +61,11 @@ type Appt = {
     name: string;
     species: string;
     breed: string | null;
-    weightLbs: any; // Decimal from Prisma
+    weightLbs: unknown; // Decimal from Prisma
   };
-  service: { id: string; name: string; durationMinutes: number };
+  service: { id: string; name: string; durationMinutes: number; priceCents: number };
+  services?: { serviceId?: string; id?: string; name: string; durationMinutes: number; priceCents: number }[];
+  addOns?: { addOnId?: string | null; id?: string | null; name: string; durationMinutes: number; priceCents: number }[];
 };
 
 interface TimeGridColProps {
@@ -108,7 +111,8 @@ export function TimeGridColClient({
         const start = new Date(a.startsAt);
         const end = new Date(a.endsAt);
         const startMin = minutesInZone(start, timezone);
-        const dur = Math.max(1, (end.getTime() - start.getTime()) / 60_000);
+        const dur = appointmentDurationMinutes(a);
+        const label = appointmentServiceLabel(a);
         const top = minuteTop(startMin);
         const height = Math.max(dur * PX_PER_MIN - 3, 28);
         const color = animalColor(a.animal.id);
@@ -149,7 +153,12 @@ export function TimeGridColClient({
             )}
             {height > 58 && (
               <div style={{ fontSize: 11.5, color: color.text, opacity: 0.82, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {a.service.name}
+                {label}
+              </div>
+            )}
+            {height > 78 && (
+              <div style={{ fontSize: 10.5, color: color.text, opacity: 0.72, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {dur} minutes
               </div>
             )}
           </div>
@@ -157,24 +166,6 @@ export function TimeGridColClient({
       })}
     </div>
   );
-}
-
-interface CalendarGridProps {
-  view: "week" | "day" | "month";
-  weekOffset?: number;
-  dayOffset?: number;
-  monthOffset?: number;
-  appointments: Appt[];
-  timezone: string;
-  gridConfig: {
-    hours: number[];
-    gridH: number;
-    nowTop: number;
-    showNow: boolean;
-  };
-  days?: string[];
-  label?: string;
-  dayNames?: string[];
 }
 
 export function CalendarInteractiveWrapper() {
@@ -188,11 +179,13 @@ export function CalendarInteractiveWrapper() {
             id: selectedAppointment.id,
             startsAt: selectedAppointment.startsAt,
             endsAt: selectedAppointment.endsAt,
-            status: selectedAppointment.status as any,
+            status: selectedAppointment.status,
             priceCents: selectedAppointment.priceCents,
             client: selectedAppointment.client,
             animal: selectedAppointment.animal,
             service: selectedAppointment.service,
+            services: selectedAppointment.services,
+            addOns: selectedAppointment.addOns,
           }}
           timezone={window.location.hostname ? "UTC" : "America/Los_Angeles"} // This will be overridden by server
           onClose={() => setSelectedAppointment(null)}
@@ -214,11 +207,13 @@ export function AppointmentClickHandler() {
           id: selectedAppointment.id,
           startsAt: selectedAppointment.startsAt,
           endsAt: selectedAppointment.endsAt,
-          status: selectedAppointment.status as any,
+          status: selectedAppointment.status,
           priceCents: selectedAppointment.priceCents,
           client: selectedAppointment.client,
           animal: selectedAppointment.animal,
           service: selectedAppointment.service,
+          services: selectedAppointment.services,
+          addOns: selectedAppointment.addOns,
         }}
         timezone="UTC"
         onClose={() => setSelectedAppointment(null)}

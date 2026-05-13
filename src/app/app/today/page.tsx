@@ -4,6 +4,7 @@ import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { TodayApptRow } from "@/components/TodayApptRow";
 import { TopbarSearch } from "@/components/TopbarSearch";
+import { appointmentDurationMinutes } from "@/lib/appointment-summary";
 
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -17,9 +18,6 @@ function fmtDuration(mins: number) {
   return `${h}h ${m}m`;
 }
 
-function fmt12(date: Date) {
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
 function petEmoji(species: string) {
   const s = species.toLowerCase();
   return s === "dog" ? "🐶" : s === "cat" ? "🐈" : "🐾";
@@ -30,6 +28,7 @@ export default async function TodayPage() {
   if (!ctx) redirect("/login");
 
   const today    = new Date();
+  const nowTime  = today.getTime();
   const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
   const dayEnd   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
@@ -43,7 +42,9 @@ export default async function TodayPage() {
       include: {
         animal: { select: { id: true, name: true, species: true, breed: true } },
         client: { select: { id: true, name: true } },
-        service: { select: { name: true, durationMinutes: true, description: true } },
+        service: { select: { name: true, durationMinutes: true, priceCents: true, description: true } },
+        services: { orderBy: { sortOrder: "asc" } },
+        addOns: { orderBy: { sortOrder: "asc" } },
       },
       orderBy: { startsAt: "asc" },
     }),
@@ -66,13 +67,13 @@ export default async function TodayPage() {
   const completedCount = active.filter((a) => ["COMPLETED", "READY"].includes(a.status)).length;
   const inChairCount   = active.filter((a) => ["IN_PROGRESS", "CHECKED_IN"].includes(a.status)).length;
   const upcomingCount  = active.filter((a) => ["CONFIRMED", "REQUESTED"].includes(a.status)).length;
-  const chairMins      = active.reduce((s, a) => s + a.service.durationMinutes, 0);
+  const chairMins      = active.reduce((s, a) => s + appointmentDurationMinutes(a), 0);
 
   const dueAlerts = rebookCandidates
     .map((a) => ({
       ...a,
-      daysSince: Math.floor((Date.now() - (a.lastVisitAt?.getTime() ?? 0)) / 86_400_000),
-      daysUntil: (a.preferredCadenceDays ?? 0) - Math.floor((Date.now() - (a.lastVisitAt?.getTime() ?? 0)) / 86_400_000),
+      daysSince: Math.floor((nowTime - (a.lastVisitAt?.getTime() ?? 0)) / 86_400_000),
+      daysUntil: (a.preferredCadenceDays ?? 0) - Math.floor((nowTime - (a.lastVisitAt?.getTime() ?? 0)) / 86_400_000),
     }))
     .filter((a) => a.daysUntil <= 14)
     .sort((a, b) => a.daysUntil - b.daysUntil)
@@ -118,7 +119,7 @@ export default async function TodayPage() {
 
           {/* Revenue */}
           <div style={{ background: "#fff", borderRadius: 16, border: "1px solid var(--d-line-2)", padding: "20px 24px" }}>
-            <div style={{ fontSize: 12, color: "var(--d-ink-3)", fontWeight: 600, marginBottom: 8 }}>Today's revenue</div>
+            <div style={{ fontSize: 12, color: "var(--d-ink-3)", fontWeight: 600, marginBottom: 8 }}>Today&apos;s revenue</div>
             <div style={{ fontFamily: "var(--dash-serif)", fontSize: 40, fontWeight: 400, lineHeight: 1, marginBottom: 10 }}>
               {fmtMoney(totalCents)}
             </div>
@@ -161,7 +162,7 @@ export default async function TodayPage() {
         {/* ── Today's schedule ── */}
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 12 }}>
           <div style={{ fontFamily: "var(--dash-sans)", fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>
-            Today's schedule
+            Today&apos;s schedule
           </div>
           <div style={{ fontSize: 13, color: "var(--d-ink-3)" }}>{active.length} appointment{active.length !== 1 ? "s" : ""}</div>
         </div>

@@ -11,7 +11,7 @@ export default async function ServicesPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  const [services, monthlyCounts] = await Promise.all([
+  const [services, addOns, monthlyCounts] = await Promise.all([
     db.service.findMany({
       where: { tenantId: ctx.tenantId },
       orderBy: [{ active: "desc" }, { name: "asc" }],
@@ -25,6 +25,21 @@ export default async function ServicesPage() {
         priceCents: true,
         active: true,
         species: true,
+        addOnLinks: { select: { addOnId: true } },
+      },
+    }),
+    db.addOn.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        durationMinutes: true,
+        priceCents: true,
+        active: true,
+        species: true,
+        serviceLinks: { select: { serviceId: true } },
       },
     }),
     db.appointment.groupBy({
@@ -42,5 +57,5 @@ export default async function ServicesPage() {
     monthlyCounts.map((c) => [c.serviceId, c._count.serviceId])
   );
 
-  return <ServicesClient services={services} monthlyCountMap={countMap} tenantName={ctx.name} />;
+  return <ServicesClient services={services} addOns={addOns} monthlyCountMap={countMap} tenantName={ctx.name} />;
 }

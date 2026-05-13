@@ -20,8 +20,27 @@ export async function GET(req: NextRequest) {
       id: true, name: true, description: true,
       durationMinutes: true, priceCents: true, species: true,
       bufferBeforeMinutes: true, bufferAfterMinutes: true,
+      addOnLinks: {
+        select: {
+          addOn: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              durationMinutes: true,
+              priceCents: true,
+              species: true,
+            },
+          },
+        },
+      },
     },
   });
 
-  return NextResponse.json({ data: services });
+  return NextResponse.json({
+    data: services.map(({ addOnLinks, ...service }) => ({
+      ...service,
+      addOns: addOnLinks.map((link) => link.addOn),
+    })),
+  });
 }

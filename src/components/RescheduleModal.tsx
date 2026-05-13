@@ -7,7 +7,9 @@ import { rescheduleAppointment } from "@/server/actions/appointments";
 export type RescheduleModalProps = {
   appointmentId: string;
   currentStartsAt: Date | string;
-  serviceId: string;
+  serviceId?: string;
+  serviceIds?: string[];
+  addOnIds?: string[];
   serviceName: string;
   serviceDurationMinutes: number;
   timezone: string;
@@ -18,6 +20,8 @@ export function RescheduleModal({
   appointmentId,
   currentStartsAt,
   serviceId,
+  serviceIds,
+  addOnIds = [],
   serviceName,
   serviceDurationMinutes,
   timezone,
@@ -39,7 +43,15 @@ export function RescheduleModal({
     setError(null);
     startTransition(async () => {
       try {
-        const result = await fetchAvailableSlots(serviceId, selectedDate);
+        const selectedServiceIds = serviceIds && serviceIds.length > 0
+          ? serviceIds
+          : serviceId ? [serviceId] : [];
+        const result = await fetchAvailableSlots({
+          serviceIds: selectedServiceIds,
+          addOnIds,
+          durationMinutes: serviceDurationMinutes,
+          date: selectedDate,
+        });
         setSlots(result);
         setSelectedSlot(null);
         setStep("time");

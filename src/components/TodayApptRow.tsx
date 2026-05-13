@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { StatusChanger } from "./StatusChanger";
+import { appointmentDurationMinutes, appointmentServiceLabel } from "@/lib/appointment-summary";
 
 type Appt = {
   id: string;
@@ -10,9 +11,12 @@ type Appt = {
   priceCents: number;
   startsAt: Date;
   endsAt: Date;
+  durationMinutes?: number | null;
   animal: { id: string; name: string; species: string; breed: string | null };
   client: { id: string; name: string };
-  service: { name: string; durationMinutes: number; description: string | null };
+  service: { name: string; durationMinutes: number; priceCents: number; description: string | null };
+  services?: { name: string; durationMinutes: number; priceCents: number }[];
+  addOns?: { name: string; durationMinutes: number; priceCents: number }[];
 };
 
 function fmt12(date: Date) {
@@ -40,6 +44,8 @@ export function TodayApptRow({ appt, isLast }: { appt: Appt; isLast: boolean }) 
   const s = statusDisplay(appt.status);
   const start = new Date(appt.startsAt);
   const end   = new Date(appt.endsAt);
+  const serviceLabel = appointmentServiceLabel(appt);
+  const duration = appointmentDurationMinutes(appt);
 
   return (
     <div style={{ borderBottom: isLast ? "none" : "1px solid var(--d-line)" }}>
@@ -116,7 +122,7 @@ export function TodayApptRow({ appt, isLast }: { appt: Appt; isLast: boolean }) 
           style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "flex-end" }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ fontSize: 13, color: "var(--d-ink-3)", whiteSpace: "nowrap" }}>{appt.service.name}</div>
+          <div style={{ fontSize: 13, color: "var(--d-ink-3)", whiteSpace: "nowrap" }}>{serviceLabel}</div>
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 5,
             padding: "4px 11px", borderRadius: 999,
@@ -144,8 +150,8 @@ export function TodayApptRow({ appt, isLast }: { appt: Appt; isLast: boolean }) 
         }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--d-ink-4)", marginBottom: 4 }}>Service</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--d-ink)", marginBottom: 2 }}>{appt.service.name}</div>
-            <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>{appt.service.durationMinutes} min · {fmtMoney(appt.priceCents)}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--d-ink)", marginBottom: 2 }}>{serviceLabel}</div>
+            <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>{duration} min · {fmtMoney(appt.priceCents)}</div>
           </div>
 
           <div>

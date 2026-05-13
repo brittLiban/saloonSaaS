@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { BookingModal } from "@/components/BookingModal";
-import type { SlimService } from "@/server/actions/booking";
+import type { SlimAddOn, SlimService } from "@/server/actions/booking";
 
-export function CalendarActions({ services }: { services: SlimService[] }) {
+export function CalendarActions({ services, addOns = [] }: { services: SlimService[]; addOns?: SlimAddOn[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -16,7 +16,7 @@ export function CalendarActions({ services }: { services: SlimService[] }) {
         </svg>
         New booking
       </button>
-      {open && <BookingModal services={services} onClose={() => setOpen(false)} />}
+      {open && <BookingModal services={services} addOns={addOns} onClose={() => setOpen(false)} />}
     </>
   );
 }

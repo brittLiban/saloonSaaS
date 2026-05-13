@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { CalendarActions } from "./CalendarActions";
 import { TopbarSearch } from "./TopbarSearch";
-import type { SlimService } from "@/server/actions/booking";
+import type { SlimAddOn, SlimService } from "@/server/actions/booking";
 
 type View = "day" | "week" | "month";
 
@@ -14,6 +14,7 @@ export function CalendarNav({
   monthOffset,
   label,
   services,
+  addOns = [],
 }: {
   view: View;
   weekOffset: number;
@@ -21,6 +22,7 @@ export function CalendarNav({
   monthOffset: number;
   label: string;
   services: SlimService[];
+  addOns?: SlimAddOn[];
 }) {
   const router = useRouter();
 
@@ -113,7 +115,7 @@ export function CalendarNav({
           <span className="topbar-bell-dot" />
         </button>
 
-        <CalendarActions services={services} />
+        <CalendarActions services={services} addOns={addOns} />
       </div>
     </>
   );

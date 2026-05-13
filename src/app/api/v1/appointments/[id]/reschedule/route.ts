@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { resolveApiKey, apiError, requireScope } from "@/lib/api-auth";
 import { db } from "@/server/db";
+import { appointmentDurationMinutes } from "@/lib/appointment-summary";
 
 const Schema = z.object({
   newStartsAt: z.coerce.date(),
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (appt.status === "COMPLETED") return apiError("Cannot reschedule a completed appointment", 409);
 
   const { newStartsAt, reason } = parsed.data;
-  const newEndsAt = new Date(newStartsAt.getTime() + appt.service.durationMinutes * 60_000);
+  const duration = appointmentDurationMinutes(appt);
+  const newEndsAt = new Date(newStartsAt.getTime() + duration * 60_000);
 
   // Conflict check (excluding this appointment)
   const conflict = await db.appointment.findFirst({

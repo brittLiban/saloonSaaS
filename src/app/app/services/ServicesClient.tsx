@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { upsertService, toggleServiceActive } from "@/server/actions/services";
+import { upsertService, upsertAddOn, toggleAddOnActive } from "@/server/actions/services";
 import { TopbarSearch } from "@/components/TopbarSearch";
 
 type Service = {
@@ -17,6 +17,18 @@ type Service = {
   priceCents: number;
   active: boolean;
   species: string | null;
+  addOnLinks?: { addOnId: string }[];
+};
+
+type AddOn = {
+  id: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  priceCents: number;
+  active: boolean;
+  species: string | null;
+  serviceLinks: { serviceId: string }[];
 };
 
 function fmtPrice(cents: number) {
@@ -33,23 +45,27 @@ function fmtDuration(mins: number) {
 
 export function ServicesClient({
   services: initial,
+  addOns: initialAddOns,
   monthlyCountMap,
   tenantName,
 }: {
   services: Service[];
+  addOns: AddOn[];
   monthlyCountMap: Record<string, number>;
   tenantName: string;
 }) {
   const router = useRouter();
-  const [services, setServices] = useState(initial);
+  const [services] = useState(initial);
+  const [addOns, setAddOns] = useState(initialAddOns);
   const [editTarget, setEditTarget] = useState<Service | "new" | null>(null);
+  const [editAddOnTarget, setEditAddOnTarget] = useState<AddOn | "new" | null>(null);
   const [, startToggle] = useTransition();
 
-  function handleToggle(svc: Service) {
-    const next = !svc.active;
-    setServices((prev) => prev.map((s) => (s.id === svc.id ? { ...s, active: next } : s)));
+  function handleAddOnToggle(addOn: AddOn) {
+    const next = !addOn.active;
+    setAddOns((prev) => prev.map((item) => (item.id === addOn.id ? { ...item, active: next } : item)));
     startToggle(async () => {
-      await toggleServiceActive(svc.id, next);
+      await toggleAddOnActive(addOn.id, next);
     });
   }
 
@@ -58,7 +74,13 @@ export function ServicesClient({
     router.refresh();
   }
 
+  function handleAddOnSaved() {
+    setEditAddOnTarget(null);
+    router.refresh();
+  }
+
   const activeServices = services.filter((s) => s.active);
+  const activeAddOns = addOns.filter((a) => a.active);
 
   return (
     <>
@@ -199,6 +221,101 @@ export function ServicesClient({
             </button>
           </div>
         )}
+
+        <div style={{ marginTop: 34, marginBottom: 12, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontFamily: "var(--dash-sans)", fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>
+              Add-ons
+            </div>
+            <div style={{ fontSize: 13, color: "var(--d-ink-3)", marginTop: 3 }}>
+              Optional extras that can add time and price to a booking.
+            </div>
+          </div>
+          <button className="d-btn" type="button" onClick={() => setEditAddOnTarget("new")}>
+            New add-on
+          </button>
+        </div>
+
+        {activeAddOns.length === 0 ? (
+          <div style={{
+            background: "#fff", borderRadius: 12, border: "1px solid var(--d-line-2)",
+            padding: "28px 24px", color: "var(--d-ink-3)", fontSize: 14,
+          }}>
+            No add-ons yet. Add deshedding, teeth brushing, flea treatment, nail grinding, or any salon-specific extra.
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            {activeAddOns.map((addOn) => {
+              const allowedServices = addOn.serviceLinks
+                .map((link) => services.find((service) => service.id === link.serviceId)?.name)
+                .filter(Boolean)
+                .join(", ");
+
+              return (
+                <div
+                  key={addOn.id}
+                  style={{
+                    background: "#fff",
+                    borderRadius: 12,
+                    border: "1px solid var(--d-line-2)",
+                    padding: "18px 20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 800 }}>{addOn.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginTop: 3 }}>
+                        {allowedServices || "All services"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditAddOnTarget(addOn)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        padding: 4, color: "var(--d-ink-4)", display: "grid", placeItems: "center",
+                        borderRadius: 6,
+                      }}
+                      title="Edit add-on"
+                    >
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                    <span style={{ fontFamily: "var(--dash-serif)", fontSize: 30, color: "var(--d-ink)", lineHeight: 1 }}>
+                      {fmtPrice(addOn.priceCents)}
+                    </span>
+                    <span style={{ fontSize: 13, color: "var(--d-ink-4)" }}>
+                      {fmtDuration(addOn.durationMinutes)}
+                    </span>
+                  </div>
+
+                  {addOn.description && (
+                    <div style={{ fontSize: 12, color: "var(--d-ink-3)", lineHeight: 1.45 }}>
+                      {addOn.description}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="d-btn"
+                    style={{ marginTop: "auto", fontSize: 12, alignSelf: "flex-start" }}
+                    onClick={() => handleAddOnToggle(addOn)}
+                  >
+                    Deactivate
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {editTarget !== null && (
@@ -206,6 +323,14 @@ export function ServicesClient({
           service={editTarget === "new" ? null : editTarget}
           onClose={() => setEditTarget(null)}
           onSaved={handleSaved}
+        />
+      )}
+      {editAddOnTarget !== null && (
+        <AddOnModal
+          addOn={editAddOnTarget === "new" ? null : editAddOnTarget}
+          services={services}
+          onClose={() => setEditAddOnTarget(null)}
+          onSaved={handleAddOnSaved}
         />
       )}
     </>
@@ -221,8 +346,6 @@ function ServiceModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -256,7 +379,7 @@ function ServiceModal({
     });
   }
 
-  if (!mounted) return null;
+  if (typeof document === "undefined") return null;
 
   return createPortal(
     <div
@@ -383,6 +506,191 @@ function ServiceModal({
             disabled={isPending || !name || !price || !duration}
           >
             {isPending ? "Saving…" : "Save service"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function AddOnModal({
+  addOn,
+  services,
+  onClose,
+  onSaved,
+}: {
+  addOn: AddOn | null;
+  services: Service[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const [name, setName] = useState(addOn?.name ?? "");
+  const [description, setDescription] = useState(addOn?.description ?? "");
+  const [duration, setDuration] = useState(String(addOn?.durationMinutes ?? 30));
+  const [price, setPrice] = useState(addOn ? String(addOn.priceCents / 100) : "");
+  const [species, setSpecies] = useState(addOn?.species ?? "");
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>(
+    addOn?.serviceLinks.map((link) => link.serviceId) ?? [],
+  );
+
+  function toggleService(serviceId: string) {
+    setSelectedServiceIds((prev) => (
+      prev.includes(serviceId)
+        ? prev.filter((id) => id !== serviceId)
+        : [...prev, serviceId]
+    ));
+  }
+
+  function handleSubmit() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await upsertAddOn({
+          id: addOn?.id,
+          name,
+          description: description || undefined,
+          durationMinutes: Number(duration),
+          priceCents: Math.round(Number(price) * 100),
+          active: addOn?.active ?? true,
+          species: species || undefined,
+          serviceIds: selectedServiceIds,
+        });
+        onSaved();
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Failed to save. Please try again.");
+      }
+    });
+  }
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed", inset: 0, zIndex: 2000,
+        background: "rgba(22, 22, 22, 0.55)",
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        padding: "72px 16px 40px", overflowY: "auto",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "#fff", borderRadius: 20,
+          border: "1px solid rgba(0,0,0,0.08)",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
+          width: "100%", maxWidth: 520, padding: 28, flexShrink: 0,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ fontFamily: "var(--dash-sans)", fontSize: 18, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 20 }}>
+          {addOn ? "Edit add-on" : "New add-on"}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Field label="Add-on name">
+            <input
+              className="d-input"
+              style={{ width: "100%" }}
+              placeholder="e.g. Deshedding"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Duration (minutes)">
+              <input
+                className="d-input"
+                style={{ width: "100%" }}
+                type="number"
+                min={0}
+                max={480}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+              />
+            </Field>
+            <Field label="Price (USD)">
+              <input
+                className="d-input"
+                style={{ width: "100%" }}
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="20.00"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <Field label="Species (leave blank for all)">
+            <select
+              className="d-input"
+              style={{ width: "100%" }}
+              value={species}
+              onChange={(e) => setSpecies(e.target.value)}
+            >
+              <option value="">All species</option>
+              <option value="Dog">Dog</option>
+              <option value="Cat">Cat</option>
+              <option value="Bird">Bird</option>
+              <option value="Rabbit">Rabbit</option>
+            </select>
+          </Field>
+
+          <Field label="Can be used with">
+            <div style={{ border: "1px solid var(--d-line-2)", borderRadius: 10, padding: 10, display: "grid", gap: 8, maxHeight: 180, overflowY: "auto" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--d-ink-3)" }}>
+                <input
+                  type="checkbox"
+                  checked={selectedServiceIds.length === 0}
+                  onChange={() => setSelectedServiceIds([])}
+                />
+                All services
+              </label>
+              {services.map((svc) => (
+                <label key={svc.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedServiceIds.includes(svc.id)}
+                    onChange={() => toggleService(svc.id)}
+                  />
+                  {svc.name}{svc.species ? ` (${svc.species})` : ""}
+                </label>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Description (optional)">
+            <textarea
+              className="d-input"
+              style={{ width: "100%", minHeight: 68, resize: "vertical" }}
+              placeholder="Notes for groomers or booking workflows"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </Field>
+        </div>
+
+        {error && (
+          <div style={{ marginTop: 14, padding: "10px 14px", background: "#fff1ee", borderRadius: 8, color: "var(--acc)", fontSize: 13 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
+          <button className="d-btn" onClick={onClose} disabled={isPending}>Cancel</button>
+          <button
+            className="d-btn d-btn-primary"
+            onClick={handleSubmit}
+            disabled={isPending || !name || price === "" || duration === ""}
+          >
+            {isPending ? "Saving..." : "Save add-on"}
           </button>
         </div>
       </div>

@@ -46,7 +46,6 @@ function dayNumber(dateStr: string) {
   return dateStringToUtcDate(dateStr).getUTCDate();
 }
 function hourTop(h: number) { return TOP_PAD + (h - HOUR_START) * PX_PER_HOUR; }
-function minuteTop(totalMin: number) { return TOP_PAD + (totalMin - HOUR_START * 60) * PX_PER_MIN; }
 
 /* ── date helpers ─────────────────────────────── */
 function getWeekStartDateString(offset: number, timezone: string) {
@@ -85,7 +84,13 @@ async function fetchAppts(tenantId: string, from: Date, to: Date) {
   const { db } = await import("@/server/db");
   return db.appointment.findMany({
     where: { tenantId, startsAt: { gte: from, lt: to }, status: { notIn: ["CANCELLED", "NO_SHOW"] } },
-    include: { animal: true, client: true, service: true },
+    include: {
+      animal: true,
+      client: true,
+      service: true,
+      services: { orderBy: { sortOrder: "asc" } },
+      addOns: { orderBy: { sortOrder: "asc" } },
+    },
     orderBy: { startsAt: "asc" },
   });
 }
@@ -108,15 +113,24 @@ export default async function CalendarPage({
   const dayOffset   = parseInt(params.day   ?? "0", 10) || 0;
   const monthOffset = parseInt(params.month ?? "0", 10) || 0;
 
-  const [tenant, services] = await Promise.all([
+  const [tenant, services, addOnRows] = await Promise.all([
     db.tenant.findUnique({ where: { id: ctx.tenantId }, select: { timezone: true } }),
     db.service.findMany({
       where: { tenantId: ctx.tenantId, active: true },
       select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
       orderBy: { name: "asc" },
     }),
+    db.addOn.findMany({
+      where: { tenantId: ctx.tenantId, active: true },
+      select: { id: true, name: true, durationMinutes: true, priceCents: true, species: true, serviceLinks: { select: { serviceId: true } } },
+      orderBy: { name: "asc" },
+    }),
   ]);
   const timezone = tenant?.timezone ?? "UTC";
+  const addOns = addOnRows.map(({ serviceLinks, ...addOn }) => ({
+    ...addOn,
+    serviceIds: serviceLinks.map((link) => link.serviceId),
+  }));
 
   /* ── WEEK view ── */
   if (view === "week") {
@@ -133,7 +147,7 @@ export default async function CalendarPage({
     return (
       <>
         <header className="topbar">
-          <CalendarNav view="week" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} />
+          <CalendarNav view="week" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} addOns={addOns} />
         </header>
         <div className="dash-content" style={{ paddingBottom: 40 }}>
           <div style={{ overflowX: "auto" }}>
@@ -186,7 +200,7 @@ export default async function CalendarPage({
     return (
       <>
         <header className="topbar">
-          <CalendarNav view="day" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} />
+          <CalendarNav view="day" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} addOns={addOns} />
         </header>
         <div className="dash-content" style={{ paddingBottom: 40 }}>
           <div style={{ background: "#fff", borderRadius: 18, border: "1px solid var(--d-line-2)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
@@ -240,7 +254,7 @@ export default async function CalendarPage({
   return (
     <>
       <header className="topbar">
-        <CalendarNav view="month" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} />
+        <CalendarNav view="month" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} addOns={addOns} />
       </header>
       <div className="dash-content" style={{ paddingBottom: 40 }}>
         <div style={{ background: "#fff", borderRadius: 18, border: "1px solid var(--d-line-2)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>

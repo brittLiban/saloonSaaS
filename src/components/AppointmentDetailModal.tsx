@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { updateAppointmentStatus } from "@/server/actions/appointments";
 import { RescheduleModal } from "@/components/RescheduleModal";
+import { appointmentDurationMinutes, appointmentServiceLabel } from "@/lib/appointment-summary";
 
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -33,14 +34,14 @@ function petEmoji(species: string) {
   return s === "dog" ? "🐶" : s === "cat" ? "🐈" : "🐾";
 }
 
-type Status = "CONFIRMED" | "REQUESTED" | "CHECKED_IN" | "IN_PROGRESS" | "READY" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+export type AppointmentDetailStatus = "CONFIRMED" | "REQUESTED" | "CHECKED_IN" | "IN_PROGRESS" | "READY" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 
 interface AppointmentDetailProps {
   appointment: {
     id: string;
     startsAt: string | Date;
     endsAt: string | Date;
-    status: Status;
+    status: AppointmentDetailStatus;
     priceCents: number;
     client: { id: string; name: string; phone: string | null };
     animal: {
@@ -48,15 +49,17 @@ interface AppointmentDetailProps {
       name: string;
       species: string;
       breed: string | null;
-      weightLbs: any; // Decimal from Prisma
+      weightLbs: unknown; // Decimal from Prisma
     };
-    service: { id: string; name: string; durationMinutes: number };
+    service: { id: string; name: string; durationMinutes: number; priceCents: number };
+    services?: { serviceId?: string; id?: string; name: string; durationMinutes: number; priceCents: number }[];
+    addOns?: { addOnId?: string | null; id?: string | null; name: string; durationMinutes: number; priceCents: number }[];
   };
   timezone: string;
   onClose: () => void;
 }
 
-function getNextActions(status: Status): { label: string; nextStatus: Status; style?: React.CSSProperties }[] {
+function getNextActions(status: AppointmentDetailStatus): { label: string; nextStatus: AppointmentDetailStatus; style?: React.CSSProperties }[] {
   switch (status) {
     case "CONFIRMED":
     case "REQUESTED":
@@ -70,7 +73,7 @@ function getNextActions(status: Status): { label: string; nextStatus: Status; st
   }
 }
 
-function getStatusColor(status: Status) {
+function getStatusColor(status: AppointmentDetailStatus) {
   switch (status) {
     case "COMPLETED":
       return { bg: "#dcfce7", text: "#166534" };
@@ -95,8 +98,16 @@ export function AppointmentDetailModal({
   const [showReschedule, setShowReschedule] = useState(false);
   const nextActions = getNextActions(appointment.status);
   const statusColor = getStatusColor(appointment.status);
+  const serviceLabel = appointmentServiceLabel(appointment);
+  const durationMinutes = appointmentDurationMinutes(appointment);
+  const serviceIds = appointment.services && appointment.services.length > 0
+    ? appointment.services.map((line) => line.serviceId ?? line.id).filter((id): id is string => Boolean(id))
+    : [appointment.service.id];
+  const addOnIds = (appointment.addOns ?? [])
+    .map((line) => line.addOnId ?? line.id ?? null)
+    .filter((id): id is string => Boolean(id));
 
-  function handleAction(nextStatus: Status) {
+  function handleAction(nextStatus: AppointmentDetailStatus) {
     setError(null);
     startTransition(async () => {
       try {
@@ -142,7 +153,7 @@ export function AppointmentDetailModal({
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "var(--dash-serif)", fontSize: 18, marginBottom: 6, lineHeight: 1.2 }}>
-              {appointment.animal.name}'s Appointment
+              {appointment.animal.name}&apos;s Appointment
             </div>
             <div
               style={{
@@ -182,8 +193,10 @@ export function AppointmentDetailModal({
               appointmentId={appointment.id}
               currentStartsAt={appointment.startsAt}
               serviceId={appointment.service.id}
-              serviceName={appointment.service.name}
-              serviceDurationMinutes={appointment.service.durationMinutes}
+              serviceIds={serviceIds}
+              addOnIds={addOnIds}
+              serviceName={serviceLabel}
+              serviceDurationMinutes={durationMinutes}
               timezone={timezone}
               onSuccess={() => {
                 setShowReschedule(false);
@@ -223,7 +236,7 @@ export function AppointmentDetailModal({
                     {appointment.animal.breed}
                   </div>
                 )}
-                {appointment.animal.weightLbs && (
+                {appointment.animal.weightLbs != null && (
                   <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
                     {Number(appointment.animal.weightLbs).toFixed(1)} lbs
                   </div>
@@ -238,8 +251,13 @@ export function AppointmentDetailModal({
               Service & Time
             </div>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              {appointment.service.name}
+              {serviceLabel}
             </div>
+            {appointment.addOns && appointment.addOns.length > 0 && (
+              <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginBottom: 6 }}>
+                Add-ons: {appointment.addOns.map((line) => line.name).join(", ")}
+              </div>
+            )}
             <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginBottom: 3 }}>
               📅 {fmtDateTime(appointment.startsAt, timezone)}
             </div>
@@ -247,7 +265,7 @@ export function AppointmentDetailModal({
               🕐 {fmtTime(appointment.startsAt, timezone)} - {fmtTime(appointment.endsAt, timezone)}
             </div>
             <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
-              ⏱️ {appointment.service.durationMinutes} min
+              ⏱️ {durationMinutes} min
             </div>
           </div>
 

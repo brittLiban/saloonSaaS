@@ -6,6 +6,7 @@ import { CalendarActions } from "@/components/CalendarActions";
 import { BookingPeriodTabs } from "@/components/BookingPeriodTabs";
 import { BookingVolumeChart } from "@/components/BookingVolumeChart";
 import { TopbarSearch } from "@/components/TopbarSearch";
+import { appointmentDurationMinutes, appointmentServiceLabel } from "@/lib/appointment-summary";
 
 type Period = "today" | "week" | "month" | "3mo" | "6mo" | "year";
 type BucketUnit = "day" | "week" | "month";
@@ -109,7 +110,7 @@ export default async function BookingsPage({
   const ranges = getPeriodRanges(period, now);
 
   const [
-    currentAppts, priorAppts, chartAppts, services,
+    currentAppts, priorAppts, chartAppts, services, addOnRows,
     totalCount, allAppts,
   ] = await Promise.all([
     db.appointment.aggregate({
@@ -129,15 +130,30 @@ export default async function BookingsPage({
       select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
       orderBy: { name: "asc" },
     }),
+    db.addOn.findMany({
+      where: { tenantId: ctx.tenantId, active: true },
+      select: { id: true, name: true, durationMinutes: true, priceCents: true, species: true, serviceLinks: { select: { serviceId: true } } },
+      orderBy: { name: "asc" },
+    }),
     db.appointment.count({ where: { tenantId: ctx.tenantId } }),
     db.appointment.findMany({
       where: { tenantId: ctx.tenantId },
-      include: { animal: true, client: true, service: true },
+      include: {
+        animal: true,
+        client: true,
+        service: true,
+        services: { orderBy: { sortOrder: "asc" } },
+        addOns: { orderBy: { sortOrder: "asc" } },
+      },
       orderBy: { startsAt: "desc" },
       skip: (pageNum - 1) * pageSize,
       take: pageSize,
     }),
   ]);
+  const addOns = addOnRows.map(({ serviceLinks, ...addOn }) => ({
+    ...addOn,
+    serviceIds: serviceLinks.map((link) => link.serviceId),
+  }));
 
   // Build chart buckets
   const chartData = Array.from({ length: ranges.buckets }, (_, i) => {
@@ -190,7 +206,7 @@ export default async function BookingsPage({
             </svg>
             <span className="topbar-bell-dot" />
           </button>
-          <CalendarActions services={services} />
+          <CalendarActions services={services} addOns={addOns} />
         </div>
       </header>
 
@@ -248,6 +264,8 @@ export default async function BookingsPage({
               const s = STATUS_LABEL[a.status] ?? { label: a.status, bg: "#f3f4f6", color: "#374151" };
               const isLast = idx === allAppts.length - 1;
               const start = new Date(a.startsAt);
+              const label = appointmentServiceLabel(a);
+              const duration = appointmentDurationMinutes(a);
               return (
                 <div
                   key={a.id}
@@ -280,7 +298,7 @@ export default async function BookingsPage({
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{a.animal.name}</div>
                     <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
-                      {a.service.name} · <Link href={`/app/clients/${a.clientId}`} style={{ color: "var(--acc)" }}>{a.client.name}</Link>
+                      {label} · {duration} min · <Link href={`/app/clients/${a.clientId}`} style={{ color: "var(--acc)" }}>{a.client.name}</Link>
                     </div>
                   </div>
 

@@ -161,16 +161,17 @@ export default function DevelopersPage() {
               <p style={{ fontSize: 14, lineHeight: 1.7, color: "var(--d-ink-2)", marginBottom: 8 }}>
                 Returns open time slots for a service on a given date. Always call this before booking.
               </p>
-              <Code>{`GET /api/v1/availability?serviceId=svc_abc&date=2025-06-15
+              <Code>{`GET /api/v1/availability?serviceIds=svc_full,svc_nails&addOnIds=add_deshed&durationMinutes=270&date=2025-06-15
 
 {
   "data": {
     "date": "2025-06-15",
-    "serviceId": "svc_abc",
+    "serviceIds": ["svc_full", "svc_nails"],
+    "addOnIds": ["add_deshed"],
+    "durationMinutes": 270,
+    "timezone": "America/Los_Angeles",
     "slots": [
-      { "startsAt": "2025-06-15T09:00:00Z", "endsAt": "2025-06-15T10:30:00Z" },
-      { "startsAt": "2025-06-15T11:00:00Z", "endsAt": "2025-06-15T12:30:00Z" },
-      { "startsAt": "2025-06-15T14:00:00Z", "endsAt": "2025-06-15T15:30:00Z" }
+      { "startsAt": "2025-06-15T16:00:00.000Z", "endsAt": "2025-06-15T20:30:00.000Z" }
     ]
   }
 }`}</Code>
@@ -182,19 +183,25 @@ export default function DevelopersPage() {
 Authorization: Bearer gh_live_...
 
 {
-  "serviceId": "svc_abc123",
+  "serviceIds": ["svc_full_groom", "svc_nail_trim"],
+  "addOnIds": ["add_deshedding"],
   "animalId": "ani_xyz789",
   "clientId": "cli_def456",
-  "startsAt": "2025-06-15T09:00:00Z"
+  "startsAt": "2025-06-15T16:00:00.000Z",
+  "durationMinutes": 270
 }
 
 // 201 Response
 {
   "data": {
-    "id": "apt_...", "status": "CONFIRMED",
-    "startsAt": "2025-06-15T09:00:00Z",
-    "endsAt": "2025-06-15T10:30:00Z",
-    "priceCents": 7500
+    "appointmentId": "apt_...",
+    "status": "CONFIRMED",
+    "startsAt": "2025-06-15T16:00:00.000Z",
+    "endsAt": "2025-06-15T20:30:00.000Z",
+    "durationMinutes": 270,
+    "services": [{ "id": "svc_full_groom", "name": "Full Groom" }],
+    "addOns": [{ "id": "add_deshedding", "name": "Deshedding" }],
+    "priceCents": 12000
   }
 }`}</Code>
 
@@ -268,8 +275,16 @@ Authorization: Bearer gh_live_...
 
 {
   "data": [
-    { "id": "svc_abc", "name": "Full Groom", "durationMinutes": 90, "priceCents": 7500, "species": "Dog" },
-    { "id": "svc_def", "name": "Bath & Brush", "durationMinutes": 60, "priceCents": 5500, "species": null }
+    {
+      "id": "svc_abc",
+      "name": "Full Groom",
+      "durationMinutes": 120,
+      "priceCents": 9500,
+      "species": "Dog",
+      "addOns": [
+        { "id": "add_deshed", "name": "Deshedding", "durationMinutes": 30, "priceCents": 2500 }
+      ]
+    }
   ]
 }`}</Code>
             </Section>
@@ -334,7 +349,10 @@ return $input.all();`}</Code>
   "timestamp": "2025-06-15T09:00:00Z",
   "data": {
     "appointmentId": "apt_...", "animalId": "ani_...",
-    "clientId": "cli_...", "serviceId": "svc_...",
+    "clientId": "cli_...",
+    "services": [{ "id": "svc_...", "name": "Full Groom" }],
+    "addOns": [{ "id": "add_...", "name": "Deshedding" }],
+    "durationMinutes": 270,
     "startsAt": "2025-06-20T10:00:00Z", "status": "CONFIRMED"
   }
 }
@@ -364,10 +382,17 @@ return $input.all();`}</Code>
 
               <div style={{ fontFamily: "var(--dash-serif)", fontSize: 16, marginBottom: 10 }}>Workflow: New booking from form</div>
               <Code>{`// 1. Webhook trigger receives form data:
-{ "petName": "Biscuit", "clientEmail": "jane@example.com", "serviceId": "svc_abc", "preferredDate": "2025-06-20" }
+{
+  "petName": "Biscuit",
+  "clientEmail": "jane@example.com",
+  "serviceIds": ["svc_full_groom"],
+  "addOnIds": ["add_deshedding"],
+  "durationMinutes": 270,
+  "preferredDate": "2025-06-20"
+}
 
 // 2. HTTP Request — GET /api/v1/availability
-//    URL: ${BASE}/api/v1/availability?serviceId={{ $json.serviceId }}&date={{ $json.preferredDate }}
+//    URL: ${BASE}/api/v1/availability?serviceIds={{ $json.serviceIds.join(',') }}&addOnIds={{ $json.addOnIds.join(',') }}&durationMinutes={{ $json.durationMinutes }}&date={{ $json.preferredDate }}
 //    Auth: Header Auth → Authorization: Bearer {{ $env.GLASSHOUND_KEY }}
 
 // 3. Set node — pick first slot
@@ -375,10 +400,12 @@ return $input.all();`}</Code>
 
 // 4. HTTP Request — POST /api/v1/appointments
 {
-  "serviceId": "{{ $('Webhook').item.json.serviceId }}",
+  "serviceIds": {{ JSON.stringify($('Webhook').item.json.serviceIds) }},
+  "addOnIds": {{ JSON.stringify($('Webhook').item.json.addOnIds) }},
   "animalId": "{{ $('Lookup Animal').item.json.data[0].id }}",
   "clientId": "{{ $('Lookup Client').item.json.data[0].id }}",
-  "startsAt": "{{ $('Pick Slot').item.json.startsAt }}"
+  "startsAt": "{{ $('Pick Slot').item.json.startsAt }}",
+  "durationMinutes": {{ $('Webhook').item.json.durationMinutes }}
 }`}</Code>
 
               <div style={{ fontFamily: "var(--dash-serif)", fontSize: 16, marginBottom: 10, marginTop: 24 }}>Workflow: Rebooking reminders</div>

@@ -21,8 +21,8 @@ function appt(
   const endsAt   = new Date(startsAt.getTime() + durationMinutes * 60_000);
   return prisma.appointment.upsert({
     where: { id },
-    update: { status: status as never, startsAt, endsAt },
-    create: { id, tenantId, clientId, animalId, serviceId, priceCents, startsAt, endsAt, status: status as never, source: source as never },
+    update: { status: status as never, startsAt, endsAt, durationMinutes, priceCents },
+    create: { id, tenantId, clientId, animalId, serviceId, priceCents, startsAt, endsAt, durationMinutes, status: status as never, source: source as never },
   });
 }
 
@@ -86,6 +86,32 @@ async function upsertService(
   });
 }
 
+async function upsertAddOn(
+  tenantId: string,
+  name: string,
+  durationMinutes: number,
+  priceCents: number,
+  description: string,
+  serviceIds: string[],
+  species?: string,
+) {
+  const addOn = await prisma.addOn.upsert({
+    where: { tenantId_name: { tenantId, name } },
+    update: { durationMinutes, priceCents, description, active: true, species: species ?? null },
+    create: { tenantId, name, durationMinutes, priceCents, description, species: species ?? null },
+  });
+
+  await prisma.serviceAddOn.deleteMany({ where: { addOnId: addOn.id } });
+  if (serviceIds.length > 0) {
+    await prisma.serviceAddOn.createMany({
+      data: serviceIds.map((serviceId) => ({ serviceId, addOnId: addOn.id })),
+      skipDuplicates: true,
+    });
+  }
+
+  return addOn;
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -147,6 +173,13 @@ async function main() {
     upsertService(tenant.id, "Nail Trim",           20,  5,  1800, "Quick nail trim. Walk-in or add-on."),
     upsertService(tenant.id, "Cat Groom",           75,  15, 7500, "Low-stress lion cut or sanitary trim for cats.", "Cat"),
     upsertService(tenant.id, "Puppy First Groom",   45,  10, 5500, "Gentle intro groom for puppies under 1 year.", "Dog"),
+  ]);
+
+  await Promise.all([
+    upsertAddOn(tenant.id, "Deshedding", 30, 2500, "Extra undercoat removal and carding.", [bathBrush.id, fullGroom.id, deShed.id, puppyGroom.id], "Dog"),
+    upsertAddOn(tenant.id, "Teeth Brushing", 10, 1200, "Tooth brushing with pet-safe toothpaste.", [bathBrush.id, fullGroom.id, catGroom.id, puppyGroom.id]),
+    upsertAddOn(tenant.id, "Flea Treatment", 20, 2000, "Flea shampoo and coat treatment.", [bathBrush.id, fullGroom.id, puppyGroom.id], "Dog"),
+    upsertAddOn(tenant.id, "Nail Grinding", 15, 1500, "Dremel finish after nail trim.", [bathBrush.id, fullGroom.id, nailTrim.id, puppyGroom.id]),
   ]);
 
   // ── Clients ──────────────────────────────────────────────────────────────────
@@ -243,7 +276,7 @@ async function main() {
 
   // ── Appointments ─────────────────────────────────────────────────────────────
   // Past completed (spread over 8+ weeks for the revenue chart)
-  const appts = await Promise.all([
+  await Promise.all([
     // Week of Mar 16
     appt(tenant.id, "a_biscuit_mar16",  cPriya.id,  aBiscuit.id, fullGroom.id, 9500, 120, "2026-03-16T08:00:00Z", "COMPLETED"),
     appt(tenant.id, "a_noodle_mar17",   cFiona.id,  aNoodle.id,  bathBrush.id, 6500, 60,  "2026-03-17T10:00:00Z", "COMPLETED"),
