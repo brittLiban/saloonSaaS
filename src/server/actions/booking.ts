@@ -101,6 +101,38 @@ export async function fetchClientsWithAnimals(): Promise<SlimClient[]> {
   return clients.filter((c) => c.animals.length > 0);
 }
 
+export async function quickCreateClientWithAnimal(raw: {
+  clientName: string;
+  phone?: string;
+  animalName: string;
+  species: string;
+  vaccinated: boolean | null;
+}): Promise<SlimClient> {
+  const ctx = await requireTenantCtx();
+
+  const client = await db.client.create({
+    data: { tenantId: ctx.tenantId, name: raw.clientName, phone: raw.phone ?? null, tier: "New" },
+  });
+
+  const animal = await db.animal.create({
+    data: {
+      tenantId: ctx.tenantId,
+      clientId: client.id,
+      name: raw.animalName,
+      species: raw.species,
+      vaccinated: raw.vaccinated,
+      allergies: [],
+      behaviorFlags: [],
+    },
+  });
+
+  return {
+    id: client.id,
+    name: client.name,
+    animals: [{ id: animal.id, name: animal.name, species: animal.species, breed: animal.breed, vaccinated: animal.vaccinated }],
+  };
+}
+
 export async function fetchAvailableSlots(input: string | AvailabilityRequest, dateArg?: string): Promise<TimeSlot[]> {
   const ctx = await requireTenantCtx();
   const request = typeof input === "string"
