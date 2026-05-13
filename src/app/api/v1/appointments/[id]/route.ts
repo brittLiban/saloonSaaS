@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const appt = await db.appointment.findFirst({
     where: { id, tenantId: auth.tenantId },
     include: {
-      animal: { select: { id: true, name: true, species: true, breed: true } },
+      animal: { select: { id: true, name: true, species: true, breed: true, vaccinated: true } },
       client: { select: { id: true, name: true, email: true, phone: true } },
       service: { select: { id: true, name: true, durationMinutes: true, priceCents: true } },
       services: { orderBy: { sortOrder: "asc" } },
@@ -73,7 +73,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(parsed.data.metadata ? { metadata: parsed.data.metadata as never } : {}),
     },
     include: {
-      animal: { select: { id: true, name: true, species: true, breed: true } },
+      animal: { select: { id: true, name: true, species: true, breed: true, vaccinated: true } },
       client: { select: { id: true, name: true, email: true, phone: true } },
       service: { select: { id: true, name: true, durationMinutes: true, priceCents: true } },
       services: { orderBy: { sortOrder: "asc" } },

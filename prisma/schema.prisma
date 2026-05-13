@@ -139,6 +139,7 @@ model Animal {
   sex            String?
   dateOfBirth    DateTime?
   weightLbs      Decimal?     @db.Decimal(6, 2)
+  vaccinated     Boolean?
   allergies      String[]      @default([])
   behaviorFlags  String[]      @default([])
   preferredCadenceDays Int?

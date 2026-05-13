@@ -17,6 +17,7 @@ type Appt = {
     species: string;
     breed: string | null;
     weightLbs: unknown; // Decimal from Prisma
+    vaccinated?: boolean | null;
   };
   service: { id: string; name: string; durationMinutes: number; priceCents: number };
   services?: { serviceId?: string; id?: string; name: string; durationMinutes: number; priceCents: number }[];

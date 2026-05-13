@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
         ...(from || to ? { startsAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}),
       },
       include: {
-        animal: { select: { id: true, name: true, species: true, breed: true } },
+        animal: { select: { id: true, name: true, species: true, breed: true, vaccinated: true } },
         client: { select: { id: true, name: true, email: true, phone: true } },
         service: { select: { id: true, name: true, durationMinutes: true, priceCents: true } },
         services: { orderBy: { sortOrder: "asc" } },
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
       ...appointmentLineCreates(composition),
     },
     include: {
-      animal: { select: { id: true, name: true, species: true } },
+      animal: { select: { id: true, name: true, species: true, vaccinated: true } },
       client: { select: { id: true, name: true, email: true } },
       service: { select: { id: true, name: true, durationMinutes: true, priceCents: true } },
       services: { orderBy: { sortOrder: "asc" } },

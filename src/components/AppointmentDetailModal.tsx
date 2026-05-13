@@ -34,6 +34,18 @@ function petEmoji(species: string) {
   return s === "dog" ? "🐶" : s === "cat" ? "🐈" : "🐾";
 }
 
+function vaccinationLabel(vaccinated: boolean | null | undefined) {
+  if (vaccinated === true) return "Vaccinated";
+  if (vaccinated === false) return "Not vaccinated";
+  return "Vaccination unknown";
+}
+
+function vaccinationStyle(vaccinated: boolean | null | undefined) {
+  if (vaccinated === true) return { bg: "#dcfce7", color: "#166534" };
+  if (vaccinated === false) return { bg: "#fee2e2", color: "#991b1b" };
+  return { bg: "#fef3c7", color: "#92400e" };
+}
+
 export type AppointmentDetailStatus = "CONFIRMED" | "REQUESTED" | "CHECKED_IN" | "IN_PROGRESS" | "READY" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
 
 interface AppointmentDetailProps {
@@ -50,6 +62,7 @@ interface AppointmentDetailProps {
       species: string;
       breed: string | null;
       weightLbs: unknown; // Decimal from Prisma
+      vaccinated?: boolean | null;
     };
     service: { id: string; name: string; durationMinutes: number; priceCents: number };
     services?: { serviceId?: string; id?: string; name: string; durationMinutes: number; priceCents: number }[];
@@ -100,6 +113,7 @@ export function AppointmentDetailModal({
   const statusColor = getStatusColor(appointment.status);
   const serviceLabel = appointmentServiceLabel(appointment);
   const durationMinutes = appointmentDurationMinutes(appointment);
+  const vaxStyle = vaccinationStyle(appointment.animal.vaccinated);
   const serviceIds = appointment.services && appointment.services.length > 0
     ? appointment.services.map((line) => line.serviceId ?? line.id).filter((id): id is string => Boolean(id))
     : [appointment.service.id];
@@ -241,6 +255,18 @@ export function AppointmentDetailModal({
                     {Number(appointment.animal.weightLbs).toFixed(1)} lbs
                   </div>
                 )}
+                <div style={{
+                  display: "inline-flex",
+                  marginTop: 6,
+                  padding: "3px 8px",
+                  borderRadius: 999,
+                  background: vaxStyle.bg,
+                  color: vaxStyle.color,
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}>
+                  {vaccinationLabel(appointment.animal.vaccinated)}
+                </div>
               </div>
             </div>
           </div>

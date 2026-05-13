@@ -224,53 +224,53 @@ async function main() {
   ] = await Promise.all([
     // Atlas - Marcus's Bernese Mountain Dog
     prisma.animal.upsert({
-      where: { id: "demo_animal_atlas" }, update: { lastVisitAt: new Date("2026-04-22T17:00:00Z") },
-      create: { id: "demo_animal_atlas", tenantId: tenant.id, clientId: cMarcus.id, name: "Atlas", species: "Dog", breed: "Bernese Mountain Dog", sex: "M", dateOfBirth: new Date("2020-06-22"), weightLbs: "92.00", allergies: ["Tea-tree oil"], behaviorFlags: ["Gentle giant", "Owner nearby for nail trim"], preferredCadenceDays: 35, lastVisitAt: new Date("2026-04-22T17:00:00Z"), careSummary: "Long double coat. Use low-stress dryer ramp-up. Avoid tea-tree." },
+      where: { id: "demo_animal_atlas" }, update: { vaccinated: true, lastVisitAt: new Date("2026-04-22T17:00:00Z") },
+      create: { id: "demo_animal_atlas", tenantId: tenant.id, clientId: cMarcus.id, name: "Atlas", species: "Dog", breed: "Bernese Mountain Dog", sex: "M", dateOfBirth: new Date("2020-06-22"), weightLbs: "92.00", vaccinated: true, allergies: ["Tea-tree oil"], behaviorFlags: ["Gentle giant", "Owner nearby for nail trim"], preferredCadenceDays: 35, lastVisitAt: new Date("2026-04-22T17:00:00Z"), careSummary: "Long double coat. Use low-stress dryer ramp-up. Avoid tea-tree." },
     }),
     // Biscuit - Priya's Golden Retriever
     prisma.animal.upsert({
-      where: { id: "demo_animal_biscuit" }, update: { lastVisitAt: new Date("2026-04-28T10:00:00Z") },
-      create: { id: "demo_animal_biscuit", tenantId: tenant.id, clientId: cPriya.id, name: "Biscuit", species: "Dog", breed: "Golden Retriever", sex: "F", dateOfBirth: new Date("2019-03-14"), weightLbs: "68.00", allergies: ["Oatmeal shampoo"], behaviorFlags: ["Mouthy when nervous", "Loves water"], preferredCadenceDays: 28, lastVisitAt: new Date("2026-04-28T10:00:00Z"), careSummary: "Feathering on ears and tail needs extra attention. Avoid oatmeal shampoo." },
+      where: { id: "demo_animal_biscuit" }, update: { vaccinated: true, lastVisitAt: new Date("2026-04-28T10:00:00Z") },
+      create: { id: "demo_animal_biscuit", tenantId: tenant.id, clientId: cPriya.id, name: "Biscuit", species: "Dog", breed: "Golden Retriever", sex: "F", dateOfBirth: new Date("2019-03-14"), weightLbs: "68.00", vaccinated: true, allergies: ["Oatmeal shampoo"], behaviorFlags: ["Mouthy when nervous", "Loves water"], preferredCadenceDays: 28, lastVisitAt: new Date("2026-04-28T10:00:00Z"), careSummary: "Feathering on ears and tail needs extra attention. Avoid oatmeal shampoo." },
     }),
     // Luna - Priya's cat
     prisma.animal.upsert({
-      where: { id: "demo_animal_luna" }, update: { lastVisitAt: new Date("2026-04-01T11:00:00Z") },
-      create: { id: "demo_animal_luna", tenantId: tenant.id, clientId: cPriya.id, name: "Luna", species: "Cat", breed: "Domestic Shorthair", sex: "F", dateOfBirth: new Date("2021-11-02"), weightLbs: "9.50", allergies: [], behaviorFlags: ["Fear of dryers", "Prefers towel-dry"], preferredCadenceDays: 60, lastVisitAt: new Date("2026-04-01T11:00:00Z"), careSummary: "Towel dry only — very fearful of forced air. Low-stress handling protocol." },
+      where: { id: "demo_animal_luna" }, update: { vaccinated: true, lastVisitAt: new Date("2026-04-01T11:00:00Z") },
+      create: { id: "demo_animal_luna", tenantId: tenant.id, clientId: cPriya.id, name: "Luna", species: "Cat", breed: "Domestic Shorthair", sex: "F", dateOfBirth: new Date("2021-11-02"), weightLbs: "9.50", vaccinated: true, allergies: [], behaviorFlags: ["Fear of dryers", "Prefers towel-dry"], preferredCadenceDays: 60, lastVisitAt: new Date("2026-04-01T11:00:00Z"), careSummary: "Towel dry only — very fearful of forced air. Low-stress handling protocol." },
     }),
     // Mochi - James & Rosa's Shih Tzu
     prisma.animal.upsert({
-      where: { id: "demo_animal_mochi" }, update: { lastVisitAt: new Date("2026-05-01T09:00:00Z") },
-      create: { id: "demo_animal_mochi", tenantId: tenant.id, clientId: cJames.id, name: "Mochi", species: "Dog", breed: "Shih Tzu", sex: "M", dateOfBirth: new Date("2022-08-18"), weightLbs: "12.00", allergies: [], behaviorFlags: ["Mat-prone coat", "Wriggles during face trim"], preferredCadenceDays: 28, lastVisitAt: new Date("2026-05-01T09:00:00Z"), careSummary: "Prone to matting behind ears. Recommend 4-week cadence." },
+      where: { id: "demo_animal_mochi" }, update: { vaccinated: true, lastVisitAt: new Date("2026-05-01T09:00:00Z") },
+      create: { id: "demo_animal_mochi", tenantId: tenant.id, clientId: cJames.id, name: "Mochi", species: "Dog", breed: "Shih Tzu", sex: "M", dateOfBirth: new Date("2022-08-18"), weightLbs: "12.00", vaccinated: true, allergies: [], behaviorFlags: ["Mat-prone coat", "Wriggles during face trim"], preferredCadenceDays: 28, lastVisitAt: new Date("2026-05-01T09:00:00Z"), careSummary: "Prone to matting behind ears. Recommend 4-week cadence." },
     }),
     // Cosmo - Delia's German Shepherd
     prisma.animal.upsert({
-      where: { id: "demo_animal_cosmo" }, update: { lastVisitAt: new Date("2026-04-07T07:30:00Z") },
-      create: { id: "demo_animal_cosmo", tenantId: tenant.id, clientId: cDelia.id, name: "Cosmo", species: "Dog", breed: "German Shepherd", sex: "M", dateOfBirth: new Date("2021-01-30"), weightLbs: "78.00", allergies: [], behaviorFlags: ["Dog-reactive", "First appointment of day only", "High anxiety"], preferredCadenceDays: 45, lastVisitAt: new Date("2026-04-07T07:30:00Z"), careSummary: "Must be first dog in. Reactive to other dogs — no lobby wait. Delia stays close." },
+      where: { id: "demo_animal_cosmo" }, update: { vaccinated: true, lastVisitAt: new Date("2026-04-07T07:30:00Z") },
+      create: { id: "demo_animal_cosmo", tenantId: tenant.id, clientId: cDelia.id, name: "Cosmo", species: "Dog", breed: "German Shepherd", sex: "M", dateOfBirth: new Date("2021-01-30"), weightLbs: "78.00", vaccinated: true, allergies: [], behaviorFlags: ["Dog-reactive", "First appointment of day only", "High anxiety"], preferredCadenceDays: 45, lastVisitAt: new Date("2026-04-07T07:30:00Z"), careSummary: "Must be first dog in. Reactive to other dogs — no lobby wait. Delia stays close." },
     }),
     // Pickles - Kevin's Corgi
     prisma.animal.upsert({
-      where: { id: "demo_animal_pickles" }, update: { lastVisitAt: new Date("2026-05-06T10:00:00Z") },
-      create: { id: "demo_animal_pickles", tenantId: tenant.id, clientId: cKevin.id, name: "Pickles", species: "Dog", breed: "Pembroke Welsh Corgi", sex: "M", dateOfBirth: new Date("2025-08-05"), weightLbs: "18.50", allergies: [], behaviorFlags: ["Puppy — first groom"], preferredCadenceDays: 42, lastVisitAt: new Date("2026-05-06T10:00:00Z"), careSummary: "First groom was May 6. Very wiggly but no aggression. Positive reinforcement works well." },
+      where: { id: "demo_animal_pickles" }, update: { vaccinated: true, lastVisitAt: new Date("2026-05-06T10:00:00Z") },
+      create: { id: "demo_animal_pickles", tenantId: tenant.id, clientId: cKevin.id, name: "Pickles", species: "Dog", breed: "Pembroke Welsh Corgi", sex: "M", dateOfBirth: new Date("2025-08-05"), weightLbs: "18.50", vaccinated: true, allergies: [], behaviorFlags: ["Puppy — first groom"], preferredCadenceDays: 42, lastVisitAt: new Date("2026-05-06T10:00:00Z"), careSummary: "First groom was May 6. Very wiggly but no aggression. Positive reinforcement works well." },
     }),
     // Duchess - Sarah's Standard Poodle
     prisma.animal.upsert({
-      where: { id: "demo_animal_duchess" }, update: { lastVisitAt: new Date("2026-05-05T08:00:00Z") },
-      create: { id: "demo_animal_duchess", tenantId: tenant.id, clientId: cSarah.id, name: "Duchess", species: "Dog", breed: "Standard Poodle", sex: "F", dateOfBirth: new Date("2018-05-12"), weightLbs: "55.00", allergies: [], behaviorFlags: ["Show cut monthly"], preferredCadenceDays: 28, lastVisitAt: new Date("2026-05-05T08:00:00Z"), careSummary: "Monthly show cut. Dutch braid on topknot. Owner provides pattern photo each visit." },
+      where: { id: "demo_animal_duchess" }, update: { vaccinated: true, lastVisitAt: new Date("2026-05-05T08:00:00Z") },
+      create: { id: "demo_animal_duchess", tenantId: tenant.id, clientId: cSarah.id, name: "Duchess", species: "Dog", breed: "Standard Poodle", sex: "F", dateOfBirth: new Date("2018-05-12"), weightLbs: "55.00", vaccinated: true, allergies: [], behaviorFlags: ["Show cut monthly"], preferredCadenceDays: 28, lastVisitAt: new Date("2026-05-05T08:00:00Z"), careSummary: "Monthly show cut. Dutch braid on topknot. Owner provides pattern photo each visit." },
     }),
     // Bean - Sarah's cat
     prisma.animal.upsert({
-      where: { id: "demo_animal_bean" }, update: { lastVisitAt: new Date("2026-04-07T11:00:00Z") },
-      create: { id: "demo_animal_bean", tenantId: tenant.id, clientId: cSarah.id, name: "Bean", species: "Cat", breed: "Tabby", sex: "M", dateOfBirth: new Date("2020-02-14"), weightLbs: "13.00", allergies: [], behaviorFlags: ["Occasional bath only", "Tolerates handling well"], preferredCadenceDays: 90, lastVisitAt: new Date("2026-04-07T11:00:00Z"), careSummary: "Easy cat — no issues. Just a bath and blow-out a couple times a year." },
+      where: { id: "demo_animal_bean" }, update: { vaccinated: true, lastVisitAt: new Date("2026-04-07T11:00:00Z") },
+      create: { id: "demo_animal_bean", tenantId: tenant.id, clientId: cSarah.id, name: "Bean", species: "Cat", breed: "Tabby", sex: "M", dateOfBirth: new Date("2020-02-14"), weightLbs: "13.00", vaccinated: true, allergies: [], behaviorFlags: ["Occasional bath only", "Tolerates handling well"], preferredCadenceDays: 90, lastVisitAt: new Date("2026-04-07T11:00:00Z"), careSummary: "Easy cat — no issues. Just a bath and blow-out a couple times a year." },
     }),
     // Redwood - Tom's Alaskan Malamute
     prisma.animal.upsert({
-      where: { id: "demo_animal_redwood" }, update: { lastVisitAt: new Date("2026-04-28T13:00:00Z") },
-      create: { id: "demo_animal_redwood", tenantId: tenant.id, clientId: cTom.id, name: "Redwood", species: "Dog", breed: "Alaskan Malamute", sex: "M", dateOfBirth: new Date("2019-10-03"), weightLbs: "110.00", allergies: [], behaviorFlags: ["Heavy double coat", "Blows coat twice a year"], preferredCadenceDays: 42, lastVisitAt: new Date("2026-04-28T13:00:00Z"), careSummary: "Extreme undercoat — takes 90 min minimum de-shed. Two HV dryer passes. Bring extra towels." },
+      where: { id: "demo_animal_redwood" }, update: { vaccinated: true, lastVisitAt: new Date("2026-04-28T13:00:00Z") },
+      create: { id: "demo_animal_redwood", tenantId: tenant.id, clientId: cTom.id, name: "Redwood", species: "Dog", breed: "Alaskan Malamute", sex: "M", dateOfBirth: new Date("2019-10-03"), weightLbs: "110.00", vaccinated: true, allergies: [], behaviorFlags: ["Heavy double coat", "Blows coat twice a year"], preferredCadenceDays: 42, lastVisitAt: new Date("2026-04-28T13:00:00Z"), careSummary: "Extreme undercoat — takes 90 min minimum de-shed. Two HV dryer passes. Bring extra towels." },
     }),
     // Noodle - Fiona's Dachshund
     prisma.animal.upsert({
-      where: { id: "demo_animal_noodle" }, update: { lastVisitAt: new Date("2026-04-14T10:00:00Z") },
-      create: { id: "demo_animal_noodle", tenantId: tenant.id, clientId: cFiona.id, name: "Noodle", species: "Dog", breed: "Miniature Dachshund", sex: "F", dateOfBirth: new Date("2023-03-22"), weightLbs: "10.00", allergies: [], behaviorFlags: ["Squirmy — use grooming loop"], preferredCadenceDays: 42, lastVisitAt: new Date("2026-04-14T10:00:00Z"), careSummary: "Long-hair variant. Feathering on ears and chest. Very squirmy — use loop." },
+      where: { id: "demo_animal_noodle" }, update: { vaccinated: true, lastVisitAt: new Date("2026-04-14T10:00:00Z") },
+      create: { id: "demo_animal_noodle", tenantId: tenant.id, clientId: cFiona.id, name: "Noodle", species: "Dog", breed: "Miniature Dachshund", sex: "F", dateOfBirth: new Date("2023-03-22"), weightLbs: "10.00", vaccinated: true, allergies: [], behaviorFlags: ["Squirmy — use grooming loop"], preferredCadenceDays: 42, lastVisitAt: new Date("2026-04-14T10:00:00Z"), careSummary: "Long-hair variant. Feathering on ears and chest. Very squirmy — use loop." },
     }),
   ]);
 

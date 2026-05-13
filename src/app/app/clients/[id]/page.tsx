@@ -9,6 +9,12 @@ function petEmoji(species: string) {
   return s === "dog" ? "🐶" : s === "cat" ? "🐈" : "🐾";
 }
 
+function vaccinationText(vaccinated: boolean | null) {
+  if (vaccinated === true) return "Vaccinated";
+  if (vaccinated === false) return "Not vaccinated";
+  return "Vaccination unknown";
+}
+
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
@@ -154,7 +160,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                           {a.name}
                         </div>
                         <div style={{ fontSize: 12, color: "var(--d-ink-3)" }}>
-                          {a.breed ?? a.species} · {a._count.appointments} visit{a._count.appointments !== 1 ? "s" : ""}
+                          {a.breed ?? a.species} · {a._count.appointments} visit{a._count.appointments !== 1 ? "s" : ""} · {vaccinationText(a.vaccinated)}
                         </div>
                       </div>
                       {a.lastVisitAt && (

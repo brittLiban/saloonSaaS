@@ -11,6 +11,7 @@ const CreateSchema = z.object({
   sex: z.enum(["male", "female", "unknown"]).optional(),
   dateOfBirth: z.coerce.date().optional(),
   weightLbs: z.coerce.number().positive().optional(),
+  vaccinated: z.boolean().nullable().optional(),
   allergies: z.array(z.string()).default([]),
   behaviorFlags: z.array(z.string()).default([]),
   preferredCadenceDays: z.coerce.number().int().positive().optional(),

@@ -31,6 +31,18 @@ function petLabel(species: string) {
   return "Pet";
 }
 
+function vaccinationLabel(vaccinated: boolean | null | undefined) {
+  if (vaccinated === true) return "Vaccinated";
+  if (vaccinated === false) return "Not vaccinated";
+  return "Vaccination unknown";
+}
+
+function vaccinationColor(vaccinated: boolean | null | undefined) {
+  if (vaccinated === true) return { bg: "#dcfce7", color: "#166534", border: "#86efac" };
+  if (vaccinated === false) return { bg: "#fee2e2", color: "#991b1b", border: "#fecaca" };
+  return { bg: "#fef3c7", color: "#92400e", border: "#fde68a" };
+}
+
 function serviceAllowed(addOn: SlimAddOn, serviceIds: string[]) {
   return addOn.serviceIds.length === 0 || serviceIds.some((serviceId) => addOn.serviceIds.includes(serviceId));
 }
@@ -379,11 +391,25 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate }: Pr
                   >
                     {(selectedClient?.animals ?? []).map((animal) => (
                       <option key={animal.id} value={animal.id}>
-                        {petLabel(animal.species)} - {animal.name}{animal.breed ? ` (${animal.breed})` : ""}
+                        {petLabel(animal.species)} - {animal.name}{animal.breed ? ` (${animal.breed})` : ""} - {vaccinationLabel(animal.vaccinated)}
                       </option>
                     ))}
                   </select>
                 </Field>
+
+                {selectedAnimal && (
+                  <div style={{
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1px solid ${vaccinationColor(selectedAnimal.vaccinated).border}`,
+                    background: vaccinationColor(selectedAnimal.vaccinated).bg,
+                    color: vaccinationColor(selectedAnimal.vaccinated).color,
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}>
+                    {selectedAnimal.name}: {vaccinationLabel(selectedAnimal.vaccinated)}
+                  </div>
+                )}
               </>
             )}
 
@@ -407,6 +433,7 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate }: Pr
               <div style={{ fontFamily: "var(--dash-serif)", fontSize: 17, marginBottom: 14 }}>Booking summary</div>
               {[
                 ["Pet", `${selectedAnimal ? petLabel(selectedAnimal.species) : ""} ${selectedAnimal?.name ?? ""}${selectedAnimal?.breed ? ` - ${selectedAnimal.breed}` : ""}`],
+                ["Vaccination", vaccinationLabel(selectedAnimal?.vaccinated)],
                 ["Owner", selectedClient?.name ?? ""],
                 ["Services", serviceSummary],
                 ["Add-ons", addOnSummary || "None"],

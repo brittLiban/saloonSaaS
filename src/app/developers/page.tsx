@@ -252,6 +252,7 @@ Authorization: Bearer gh_live_...
   "data": [{
     "id": "ani_...", "name": "Biscuit", "species": "dog",
     "breed": "Golden Retriever", "weightLbs": "34.5",
+    "vaccinated": true,
     "allergies": ["lavender"], "behaviorFlags": ["anxious"],
     "preferredCadenceDays": 42, "lastVisitAt": "2025-04-30T00:00:00Z"
   }]
@@ -264,6 +265,7 @@ Authorization: Bearer gh_live_...
   "name": "Biscuit",
   "species": "dog",
   "breed": "Golden Retriever",
+  "vaccinated": true,
   "allergies": ["lavender"],
   "preferredCadenceDays": 42
 }`}</Code>

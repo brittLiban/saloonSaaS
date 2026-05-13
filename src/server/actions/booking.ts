@@ -29,7 +29,7 @@ export type SlimService = {
 export type SlimClient = {
   id: string;
   name: string;
-  animals: { id: string; name: string; species: string; breed: string | null }[];
+  animals: { id: string; name: string; species: string; breed: string | null; vaccinated: boolean | null }[];
 };
 
 export type TimeSlot = {
@@ -92,7 +92,7 @@ export async function fetchClientsWithAnimals(): Promise<SlimClient[]> {
       name: true,
       animals: {
         where: {},
-        select: { id: true, name: true, species: true, breed: true },
+        select: { id: true, name: true, species: true, breed: true, vaccinated: true },
         orderBy: { name: "asc" },
       },
     },

@@ -14,6 +14,7 @@ export type AnimalFormData = {
   sex: string | null;
   dateOfBirth: Date | null;
   weightLbs: number | null;
+  vaccinated: boolean | null;
   allergies: string[];
   behaviorFlags: string[];
   preferredCadenceDays: number | null;
@@ -38,6 +39,7 @@ export function AnimalModal({
   const [breed, setBreed]     = useState(animal?.breed ?? "");
   const [sex, setSex]         = useState(animal?.sex ?? "unknown");
   const [weight, setWeight]   = useState(animal?.weightLbs != null ? String(animal.weightLbs) : "");
+  const [vaccinated, setVaccinated] = useState(animal?.vaccinated == null ? "unknown" : animal.vaccinated ? "yes" : "no");
   const [cadence, setCadence] = useState(animal?.preferredCadenceDays != null ? String(animal.preferredCadenceDays) : "");
   const [summary, setSummary] = useState(animal?.careSummary ?? "");
 
@@ -67,6 +69,7 @@ export function AnimalModal({
           breed: breed || undefined,
           sex: sex as "male" | "female" | "unknown",
           weightLbs: weight ? Number(weight) : undefined,
+          vaccinated: vaccinated === "unknown" ? null : vaccinated === "yes",
           preferredCadenceDays: cadence ? Number(cadence) : undefined,
           careSummary: summary || undefined,
           allergies,
@@ -119,11 +122,19 @@ export function AnimalModal({
           </Field>
         </div>
 
-        {/* Weight */}
-        <Field label="Weight (lbs)">
-          <input className="d-input" style={{ width: "100%" }} type="number" min={0} step="0.1" placeholder="e.g. 45"
-            value={weight} onChange={(e) => setWeight(e.target.value)} />
-        </Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Weight (lbs)">
+            <input className="d-input" style={{ width: "100%" }} type="number" min={0} step="0.1" placeholder="e.g. 45"
+              value={weight} onChange={(e) => setWeight(e.target.value)} />
+          </Field>
+          <Field label="Vaccinated">
+            <select className="d-input" style={{ width: "100%" }} value={vaccinated} onChange={(e) => setVaccinated(e.target.value)}>
+              <option value="unknown">Unknown</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </Field>
+        </div>
 
         {/* Preferred cadence */}
         <Field label="Grooming cadence (days)">

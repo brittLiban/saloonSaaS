@@ -10,6 +10,7 @@ const UpdateSchema = z.object({
   sex: z.enum(["male", "female", "unknown"]).optional().nullable(),
   dateOfBirth: z.coerce.date().optional().nullable(),
   weightLbs: z.coerce.number().positive().optional().nullable(),
+  vaccinated: z.boolean().optional().nullable(),
   allergies: z.array(z.string()).optional(),
   behaviorFlags: z.array(z.string()).optional(),
   preferredCadenceDays: z.coerce.number().int().positive().optional().nullable(),

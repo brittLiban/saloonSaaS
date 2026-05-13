@@ -16,6 +16,18 @@ function daysAgo(date: Date | null) {
   return `${d}d ago`;
 }
 
+function vaccinationLabel(vaccinated: boolean | null) {
+  if (vaccinated === true) return "Vaccinated";
+  if (vaccinated === false) return "Not vaccinated";
+  return "Vaccination unknown";
+}
+
+function vaccinationPillClass(vaccinated: boolean | null) {
+  if (vaccinated === true) return "pill";
+  if (vaccinated === false) return "pill pill-red";
+  return "pill pill-brass";
+}
+
 export default async function AnimalsPage({
   searchParams,
 }: {
@@ -118,6 +130,9 @@ export default async function AnimalsPage({
                           {a.breed ?? a.species} · {a.client.name}
                         </div>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          <span className={vaccinationPillClass(a.vaccinated)} style={{ fontSize: 10 }}>
+                            {vaccinationLabel(a.vaccinated)}
+                          </span>
                           {a.allergies.map((tag) => (
                             <span key={tag} className="pill pill-red" style={{ fontSize: 10 }}>⚠ {tag}</span>
                           ))}

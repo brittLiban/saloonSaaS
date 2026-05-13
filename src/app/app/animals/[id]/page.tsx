@@ -28,6 +28,12 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }>
   REQUESTED:   { bg: "#f3f4f6", color: "#374151",         label: "Requested"  },
 };
 
+function vaccinationText(vaccinated: boolean | null) {
+  if (vaccinated === true) return "Vaccinated";
+  if (vaccinated === false) return "Not vaccinated";
+  return "Vaccination unknown";
+}
+
 export default async function AnimalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getTenantCtx();
   if (!ctx) redirect("/login");
@@ -86,6 +92,7 @@ export default async function AnimalDetailPage({ params }: { params: Promise<{ i
             {animal.breed ?? animal.species}
             {ageStr ? ` · ${ageStr}` : ""}
             {animal.weightLbs ? ` · ${Number(animal.weightLbs)} lbs` : ""}
+            {` · ${vaccinationText(animal.vaccinated)}`}
             {" · "}
             <Link href={`/app/clients/${animal.clientId}`} style={{ color: "var(--acc)", textDecoration: "none", fontWeight: 600 }}>
               {animal.client.name}
@@ -102,6 +109,7 @@ export default async function AnimalDetailPage({ params }: { params: Promise<{ i
             sex: animal.sex,
             dateOfBirth: animal.dateOfBirth,
             weightLbs: animal.weightLbs ? Number(animal.weightLbs) : null,
+            vaccinated: animal.vaccinated,
             allergies: animal.allergies,
             behaviorFlags: animal.behaviorFlags,
             preferredCadenceDays: animal.preferredCadenceDays,
@@ -152,7 +160,7 @@ export default async function AnimalDetailPage({ params }: { params: Promise<{ i
         )}
 
         {/* ── 4 KPI cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 16 }}>
           {[
             {
               label: "Total visits",
@@ -171,6 +179,10 @@ export default async function AnimalDetailPage({ params }: { params: Promise<{ i
             {
               label: "Preferred cadence",
               value: animal.preferredCadenceDays ? `${animal.preferredCadenceDays}d` : "Not set",
+            },
+            {
+              label: "Vaccination",
+              value: animal.vaccinated === true ? "Yes" : animal.vaccinated === false ? "No" : "Unknown",
             },
           ].map(({ label, value }) => (
             <div key={label} style={{
