@@ -9,6 +9,7 @@ const CreateSchema = z.object({
   animalId: z.string().cuid(),
   clientId: z.string().cuid(),
   startsAt: z.coerce.date(),
+  durationMinutes: z.number().int().positive().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -65,7 +66,10 @@ export async function POST(req: NextRequest) {
   if (!animal) return apiError("Animal not found", 404);
   if (!client) return apiError("Client not found", 404);
 
-  const endsAt = new Date(parsed.data.startsAt.getTime() + service.durationMinutes * 60_000);
+  const endsAt = new Date(
+    parsed.data.startsAt.getTime() + 
+    (parsed.data.durationMinutes ?? service.durationMinutes) * 60_000
+  );
 
   // Conflict check
   const conflict = await db.appointment.findFirst({

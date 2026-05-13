@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { CalendarNav } from "@/components/CalendarNav";
+import { TimeGridColWrapper } from "@/components/TimeGridColWrapper";
 import {
   addDaysToDateString,
   addMonthsToMonthStartDateString,
@@ -90,75 +91,7 @@ async function fetchAppts(tenantId: string, from: Date, to: Date) {
 }
 
 /* ── shared time-grid column ─────────────────── */
-function TimeGridCol({
-  appts,
-  today,
-  nowTop,
-  showNow,
-  gridH,
-  hours,
-  timezone,
-}: {
-  appts: Appt[];
-  today: boolean;
-  nowTop: number;
-  showNow: boolean;
-  gridH: number;
-  hours: number[];
-  timezone: string;
-}) {
-  return (
-    <div style={{
-      position: "relative", height: gridH,
-      borderLeft: "1px solid var(--d-line)",
-      background: today ? "rgba(255,90,31,0.03)" : "transparent",
-    }}>
-      {hours.map((h) => (
-        <div key={h} style={{ position: "absolute", top: hourTop(h), left: 0, right: 0, borderTop: "1px solid var(--d-line)" }} />
-      ))}
-      {hours.map((h) => (
-        <div key={`${h}h`} style={{ position: "absolute", top: hourTop(h) + PX_PER_HOUR / 2, left: 0, right: 0, borderTop: "1px dashed var(--d-line)", opacity: 0.5 }} />
-      ))}
-      {today && showNow && (
-        <div style={{ position: "absolute", top: nowTop, left: 0, right: 0, zIndex: 4 }}>
-          <div style={{ position: "absolute", left: -4, top: -4, width: 8, height: 8, borderRadius: "50%", background: "var(--acc)" }} />
-          <div style={{ borderTop: "2px solid var(--acc)" }} />
-        </div>
-      )}
-      {appts.map((a) => {
-        const start = new Date(a.startsAt);
-        const end = new Date(a.endsAt);
-        const startMin = minutesInZone(start, timezone);
-        const dur = Math.max(1, (end.getTime() - start.getTime()) / 60_000);
-        const top = minuteTop(startMin);
-        const height = Math.max(dur * PX_PER_MIN - 3, 28);
-        const color = animalColor(a.animal.id);
-        return (
-          <div key={a.id} style={{
-            position: "absolute", top: top + 2, left: 3, right: 3, height,
-            background: color.bg, borderRadius: 14, padding: "7px 10px",
-            overflow: "hidden", zIndex: 2, cursor: "pointer",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-          }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: color.text, opacity: 0.72, lineHeight: 1.4, marginBottom: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {fmt12(start, timezone)} · {fmt12(end, timezone)}
-            </div>
-            {height > 38 && (
-              <div style={{ fontSize: 14, fontWeight: 800, color: color.text, lineHeight: 1.2, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {a.animal.name}
-              </div>
-            )}
-            {height > 58 && (
-              <div style={{ fontSize: 11.5, color: color.text, opacity: 0.82, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {a.service.name}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// Note: TimeGridCol is now a client component in CalendarInteractive.tsx
 
 /* ═══════════════════════════════════════════════ */
 export default async function CalendarPage({
@@ -232,7 +165,7 @@ export default async function CalendarPage({
                 ))}
               </div>
               {days.map((day, i) => (
-                <TimeGridCol key={i} appts={apptsByDay[i]} today={isTodayDateString(day, timezone)} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} timezone={timezone} />
+                <TimeGridColWrapper key={i} appts={apptsByDay[i]} today={isTodayDateString(day, timezone)} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} timezone={timezone} />
               ))}
             </div>
           </div>
@@ -280,7 +213,7 @@ export default async function CalendarPage({
                   </div>
                 ))}
               </div>
-              <TimeGridCol appts={appointments} today={today} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} timezone={timezone} />
+              <TimeGridColWrapper appts={appointments} today={today} nowTop={nowTop} showNow={showNow} gridH={gridH} hours={hours} timezone={timezone} />
             </div>
           </div>
         </div>

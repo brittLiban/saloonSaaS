@@ -11,6 +11,7 @@ const CreateSchema = z.object({
   animalId: z.string().min(1),
   serviceId: z.string().min(1),
   startsAt: z.coerce.date(),
+  durationMinutes: z.number().int().positive().optional(),
   force: z.boolean().optional().default(false),
 });
 
@@ -38,7 +39,10 @@ export async function createAppointment(raw: unknown): Promise<{ ok: true } | { 
     where: { id: data.serviceId, tenantId: ctx.tenantId, active: true },
   });
 
-  const endsAt = new Date(data.startsAt.getTime() + service.durationMinutes * 60_000);
+  const endsAt = new Date(
+    data.startsAt.getTime() + 
+    (data.durationMinutes ?? service.durationMinutes) * 60_000
+  );
 
   // Effective blocked window including this service's buffers
   const effectiveStart = new Date(data.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
