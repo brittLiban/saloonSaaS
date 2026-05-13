@@ -176,10 +176,14 @@ async function main() {
   ]);
 
   await Promise.all([
-    upsertAddOn(tenant.id, "Deshedding", 30, 2500, "Extra undercoat removal and carding.", [bathBrush.id, fullGroom.id, deShed.id, puppyGroom.id], "Dog"),
-    upsertAddOn(tenant.id, "Teeth Brushing", 10, 1200, "Tooth brushing with pet-safe toothpaste.", [bathBrush.id, fullGroom.id, catGroom.id, puppyGroom.id]),
-    upsertAddOn(tenant.id, "Flea Treatment", 20, 2000, "Flea shampoo and coat treatment.", [bathBrush.id, fullGroom.id, puppyGroom.id], "Dog"),
-    upsertAddOn(tenant.id, "Nail Grinding", 15, 1500, "Dremel finish after nail trim.", [bathBrush.id, fullGroom.id, nailTrim.id, puppyGroom.id]),
+    upsertAddOn(tenant.id, "Deshedding",               30, 2500, "Extra undercoat removal and carding.",             [bathBrush.id, fullGroom.id, deShed.id, puppyGroom.id], "Dog"),
+    upsertAddOn(tenant.id, "Teeth Brushing",           10, 1200, "Tooth brushing with pet-safe toothpaste.",         [bathBrush.id, fullGroom.id, catGroom.id, puppyGroom.id]),
+    upsertAddOn(tenant.id, "Flea Treatment",           20, 2000, "Flea shampoo and coat treatment.",                 [bathBrush.id, fullGroom.id, puppyGroom.id], "Dog"),
+    upsertAddOn(tenant.id, "Nail Grinding",            15, 1500, "Dremel finish after nail trim.",                   [bathBrush.id, fullGroom.id, nailTrim.id, puppyGroom.id]),
+    upsertAddOn(tenant.id, "Dematting",                20, 1800, "Gentle mat removal before or during groom.",       [bathBrush.id, fullGroom.id, deShed.id, puppyGroom.id]),
+    upsertAddOn(tenant.id, "Ear Cleaning",             10, 1000, "Ear canal cleaning and drying.",                   [bathBrush.id, fullGroom.id, catGroom.id, puppyGroom.id]),
+    upsertAddOn(tenant.id, "Anal Gland Expression",    10, 1500, "External anal gland relief.",                      [bathBrush.id, fullGroom.id, puppyGroom.id]),
+    upsertAddOn(tenant.id, "Face, Feet & Tail Grooming", 15, 1200, "Tidy trim of face, paws, and tail area.",       [bathBrush.id, fullGroom.id, puppyGroom.id]),
   ]);
 
   // ── Clients ──────────────────────────────────────────────────────────────────
