@@ -60,6 +60,7 @@ export async function fetchServicesForBooking(): Promise<SlimService[]> {
       priceCents: true,
       species: true,
       addOnLinks: {
+        where: { addOn: { active: true } },
         select: {
           addOn: {
             select: { id: true, name: true, durationMinutes: true, priceCents: true, species: true, serviceLinks: { select: { serviceId: true } } },

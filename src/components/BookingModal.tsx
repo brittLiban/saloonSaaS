@@ -57,7 +57,7 @@ function uniqueAddOns(services: SlimService[], addOns: SlimAddOn[]) {
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-type Step = "service" | "slot" | "client" | "confirm";
+type Step = "service" | "addon" | "slot" | "client" | "confirm";
 
 interface Props {
   services: SlimService[];
@@ -133,9 +133,9 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
   const addOnSummary = selectedAddOns.map((a) => a.name).join(" + ");
   const bookingSummary = addOnSummary ? `${serviceSummary} + ${addOnSummary}` : serviceSummary;
 
-  const STEPS: Step[] = preselected ? ["service", "slot"] : ["service", "slot", "client"];
-  const STEP_LABELS = preselected ? ["Services", "Time"] : ["Services", "Time", "Client"];
-  const stepIdx: Record<Step, number> = { service: 0, slot: 1, client: 2, confirm: preselected ? 2 : 3 };
+  const STEPS: Step[] = preselected ? ["service", "addon", "slot"] : ["service", "addon", "slot", "client"];
+  const STEP_LABELS = preselected ? ["Service", "Add-ons", "Time"] : ["Service", "Add-ons", "Time", "Client"];
+  const stepIdx: Record<Step, number> = { service: 0, addon: 1, slot: 2, client: 3, confirm: preselected ? 3 : 4 };
 
   function toggleService(id: string) {
     setSelectedServiceIds((prev) =>
@@ -173,7 +173,6 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
       const result = await fetchClientsWithAnimals();
       setClients(result);
       if (preselected) {
-        // client already known — skip straight to confirm
         setClientId(defaultClientId!);
         setAnimalId(defaultAnimalId ?? result.find((c) => c.id === defaultClientId)?.animals[0]?.id ?? "");
         setStep("confirm");
@@ -247,7 +246,7 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
         style={{ width: "100%", maxWidth: 620, padding: 0, position: "relative", flexShrink: 0, borderRadius: 20, overflow: "hidden", maxHeight: "calc(100vh - 32px)", display: "flex", flexDirection: "column" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header — always visible, never scrolls */}
+        {/* Header */}
         <div style={{ padding: "22px 28px 18px", borderBottom: "1px solid var(--d-line)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: done ? 0 : 18 }}>
             <div style={{ fontFamily: "var(--dash-serif)", fontSize: 22, fontWeight: 700 }}>
@@ -289,7 +288,7 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
           )}
         </div>
 
-        {/* Body — scrolls when content is taller than the modal */}
+        {/* Body */}
         <div style={{ padding: "22px 28px 28px", overflowY: "auto", flex: 1, minHeight: 0 }}>
 
           {/* Done state */}
@@ -306,10 +305,10 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
             </div>
           )}
 
-          {/* Step 1: Services */}
+          {/* Step 1: Service */}
           {!done && step === "service" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <SectionLabel>Main Services</SectionLabel>
+              <SectionLabel>Choose a service</SectionLabel>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {services.map((svc) => {
                   const selected = selectedServiceIds.includes(svc.id);
@@ -336,44 +335,73 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
                 })}
               </div>
 
-              {allowedAddOns.length > 0 && (
+              {error && <ErrorBanner>{error}</ErrorBanner>}
+
+              <button
+                className="d-btn d-btn-primary"
+                onClick={() => setStep("addon")}
+                disabled={selectedServiceIds.length === 0}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+
+          {/* Step 2: Add-ons */}
+          {!done && step === "addon" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <button className="d-btn" style={{ fontSize: 12, padding: "5px 12px" }} onClick={() => setStep("service")}>Back</button>
+                <div style={{ fontSize: 13, color: "var(--d-ink-3)" }}>
+                  Selected: <strong style={{ color: "var(--d-ink)" }}>{serviceSummary}</strong>
+                </div>
+              </div>
+
+              {allowedAddOns.length > 0 ? (
                 <>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ flex: 1, height: 1, background: "var(--d-line)" }} />
-                    <SectionLabel style={{ margin: 0 }}>Add-On Services</SectionLabel>
-                    <div style={{ flex: 1, height: 1, background: "var(--d-line)" }} />
+                  <div>
+                    <SectionLabel style={{ marginBottom: 4 }}>Add-on services</SectionLabel>
+                    <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginBottom: 12 }}>Optional extras — each adds time to your appointment</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {allowedAddOns.map((addOn) => {
+                        const selected = selectedAddOnIds.includes(addOn.id);
+                        return (
+                          <button
+                            key={addOn.id}
+                            onClick={() => toggleAddOn(addOn.id)}
+                            style={{
+                              textAlign: "left", padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+                              border: selected ? "2px solid var(--oxblood)" : "1.5px solid var(--d-line-2)",
+                              background: selected ? "oklch(from var(--oxblood) l c h / 0.06)" : "oklch(1 0 0 / 0.7)",
+                              display: "flex", alignItems: "center", gap: 14, transition: "all 0.15s",
+                            }}
+                          >
+                            <div style={{
+                              width: 22, height: 22, borderRadius: "50%", flexShrink: 0, transition: "all 0.15s",
+                              background: selected ? "var(--oxblood)" : "transparent",
+                              border: selected ? "none" : "1.5px solid var(--d-line-2)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                            }}>
+                              {selected && <span style={{ fontSize: 10, color: "#fff", fontWeight: 700 }}>✓</span>}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: selected ? "var(--oxblood)" : "var(--d-ink)" }}>{addOn.name}</div>
+                            </div>
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--dash-mono)", color: "var(--d-ink-2)" }}>{fmtMoney(addOn.priceCents)}</div>
+                              <div style={{ fontSize: 11, color: "var(--d-ink-3)", marginTop: 2 }}>+{addOn.durationMinutes} min</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    {allowedAddOns.map((addOn) => {
-                      const selected = selectedAddOnIds.includes(addOn.id);
-                      return (
-                        <button
-                          key={addOn.id}
-                          onClick={() => toggleAddOn(addOn.id)}
-                          style={{
-                            textAlign: "left", padding: "10px 14px", borderRadius: 10, cursor: "pointer",
-                            border: selected ? "1.5px solid var(--oxblood)" : "1.5px solid var(--d-line-2)",
-                            background: selected ? "oklch(from var(--oxblood) l c h / 0.06)" : "oklch(1 0 0 / 0.5)",
-                            display: "flex", alignItems: "center", gap: 10, transition: "all 0.15s",
-                          }}
-                        >
-                          <div style={{
-                            width: 18, height: 18, borderRadius: "50%", flexShrink: 0, transition: "all 0.15s",
-                            background: selected ? "var(--oxblood)" : "transparent",
-                            border: selected ? "none" : "1.5px solid var(--d-line-2)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                          }}>
-                            {selected && <span style={{ fontSize: 9, color: "#fff", fontWeight: 700 }}>✓</span>}
-                          </div>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--d-ink)" }}>{addOn.name}</div>
-                            <div style={{ fontSize: 11, color: "var(--d-ink-3)", marginTop: 1 }}>+{addOn.durationMinutes} min &middot; {fmtMoney(addOn.priceCents)}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <div style={{ height: 1, background: "var(--d-line)" }} />
                 </>
+              ) : (
+                <div style={{ padding: "16px", background: "oklch(1 0 0 / 0.5)", borderRadius: 10, border: "1.5px solid var(--d-line-2)", fontSize: 13, color: "var(--d-ink-3)", textAlign: "center" }}>
+                  No add-ons available for this service.
+                </div>
               )}
 
               <div>
@@ -392,17 +420,17 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
 
               {error && <ErrorBanner>{error}</ErrorBanner>}
 
-              <button className="d-btn d-btn-primary" onClick={handleFindSlots} disabled={isPending || selectedServiceIds.length === 0 || !date}>
+              <button className="d-btn d-btn-primary" onClick={handleFindSlots} disabled={isPending || !date}>
                 {isPending ? "Loading..." : "Find available times →"}
               </button>
             </div>
           )}
 
-          {/* Step 2: Time slot */}
+          {/* Step 3: Time slot */}
           {!done && step === "slot" && (
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-                <button className="d-btn" style={{ fontSize: 12, padding: "5px 12px" }} onClick={() => setStep("service")}>Back</button>
+                <button className="d-btn" style={{ fontSize: 12, padding: "5px 12px" }} onClick={() => setStep("addon")}>Back</button>
                 <div style={{ fontSize: 13, color: "var(--d-ink-3)" }}>
                   <strong style={{ color: "var(--d-ink)" }}>{bookingSummary}</strong>&ensp;&bull;&ensp;{new Date(date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
                 </div>
@@ -411,7 +439,7 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
               {slots.length === 0 ? (
                 <div style={{ padding: "44px 0", textAlign: "center" }}>
                   <div style={{ fontSize: 15, color: "var(--d-ink-3)", marginBottom: 14 }}>No available slots on this date.</div>
-                  <button className="d-btn" onClick={() => setStep("service")}>Change date</button>
+                  <button className="d-btn" onClick={() => setStep("addon")}>Change date</button>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, maxHeight: 380, overflowY: "auto", paddingRight: 2 }}>
@@ -445,7 +473,7 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
             </div>
           )}
 
-          {/* Step 3: Client */}
+          {/* Step 4: Client */}
           {!done && step === "client" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -572,11 +600,11 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
             </div>
           )}
 
-          {/* Step 4: Confirm */}
+          {/* Step 5: Confirm */}
           {!done && step === "confirm" && (
             <div>
               <div style={{ marginBottom: 18 }}>
-                <button className="d-btn" style={{ fontSize: 12, padding: "5px 12px" }} onClick={() => setStep("client")}>Back</button>
+                <button className="d-btn" style={{ fontSize: 12, padding: "5px 12px" }} onClick={() => setStep(preselected ? "slot" : "client")}>Back</button>
               </div>
 
               <div style={{ background: "oklch(from var(--oxblood) l c h / 0.05)", border: "1px solid oklch(from var(--oxblood) l c h / 0.18)", borderRadius: 14, padding: "20px 22px", marginBottom: 18 }}>
