@@ -74,7 +74,7 @@ export function DashSidebar({ name, role }: { name: string; role: string }) {
     return pathname === href || (href !== "/app" && pathname.startsWith(href));
   }
 
-  const mobileNavTabs = [workspaceTabs[0], workspaceTabs[1], workspaceTabs[2], workspaceTabs[4], workspaceTabs[5]];
+  const mobileNavTabs = [workspaceTabs[0], workspaceTabs[1], workspaceTabs[2], workspaceTabs[4], workspaceTabs[6]];
 
   return (
     <>

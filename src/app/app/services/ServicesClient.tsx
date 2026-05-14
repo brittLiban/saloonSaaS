@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -94,19 +93,18 @@ export function ServicesClient({
           <TopbarSearch />
         </div>
         <div className="topbar-actions">
-          <button className="topbar-bell" type="button" aria-label="Notifications">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <span className="topbar-bell-dot" />
-          </button>
-          <Link href="/app/calendar" className="d-btn d-btn-primary">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <button className="d-btn" onClick={() => setEditAddOnTarget("new")}>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            New booking
-          </Link>
+            New add-on
+          </button>
+          <button className="d-btn d-btn-primary" onClick={() => setEditTarget("new")}>
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            New service
+          </button>
         </div>
       </header>
 
@@ -218,18 +216,13 @@ export function ServicesClient({
           </div>
         )}
 
-        <div style={{ marginTop: 34, marginBottom: 12, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontFamily: "var(--dash-sans)", fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>
-              Add-ons
-            </div>
-            <div style={{ fontSize: 13, color: "var(--d-ink-3)", marginTop: 3 }}>
-              Optional extras that can add time and price to a booking.
-            </div>
+        <div style={{ marginTop: 34, marginBottom: 12 }}>
+          <div style={{ fontFamily: "var(--dash-sans)", fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>
+            Add-ons
           </div>
-          <button className="d-btn" type="button" onClick={() => setEditAddOnTarget("new")}>
-            New add-on
-          </button>
+          <div style={{ fontSize: 13, color: "var(--d-ink-3)", marginTop: 3 }}>
+            Optional extras that can add time and price to a booking.
+          </div>
         </div>
 
         {activeAddOns.length === 0 ? (
