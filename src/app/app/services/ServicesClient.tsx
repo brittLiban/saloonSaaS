@@ -125,11 +125,7 @@ export function ServicesClient({
             </button>
           </div>
         ) : (
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 16,
-          }}>
+          <div className="svc-grid">
             {activeServices.map((svc) => {
               const bookingCount = monthlyCountMap[svc.id] ?? 0;
               return (
@@ -244,7 +240,7 @@ export function ServicesClient({
             No add-ons yet. Add deshedding, teeth brushing, flea treatment, nail grinding, or any salon-specific extra.
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          <div className="svc-grid">
             {activeAddOns.map((addOn) => {
               const allowedServices = addOn.serviceLinks
                 .map((link) => services.find((service) => service.id === link.serviceId)?.name)
@@ -430,7 +426,7 @@ function ServiceModal({
             />
           </Field>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="form-grid-2">
             <Field label="Duration (minutes)">
               <input
                 className="d-input"
@@ -456,7 +452,7 @@ function ServiceModal({
             </Field>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="form-grid-2">
             <Field label="Buffer before (min)">
               <input
                 className="d-input"
@@ -658,7 +654,7 @@ function AddOnModal({
             />
           </Field>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="form-grid-2">
             <Field label="Duration (minutes)">
               <input
                 className="d-input"

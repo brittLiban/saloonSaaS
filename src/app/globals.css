@@ -804,6 +804,33 @@ textarea.d-input {
   .mobile-bottom-nav { display: none; }
 }
 
+/* ─ Services page responsive grids ─ */
+.svc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .svc-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .svc-grid { grid-template-columns: 1fr; gap: 12px; }
+  .form-grid-2 { grid-template-columns: 1fr; gap: 10px; }
+  .form-grid-3 { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
 @media (max-width: 640px) {
   .wrap { padding: 0 22px; }
   .hero h1 { font-size: 40px; }
