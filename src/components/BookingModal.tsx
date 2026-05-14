@@ -58,17 +58,18 @@ function uniqueAddOns(services: SlimService[], addOns: SlimAddOn[]) {
 }
 
 type Step = "service" | "slot" | "client" | "confirm";
-const STEPS: Step[] = ["service", "slot", "client"];
-const STEP_LABELS = ["Services", "Time", "Client"];
 
 interface Props {
   services: SlimService[];
   addOns?: SlimAddOn[];
   onClose: () => void;
   defaultDate?: string;
+  defaultClientId?: string;
+  defaultAnimalId?: string;
 }
 
-export function BookingModal({ services, addOns = [], onClose, defaultDate }: Props) {
+export function BookingModal({ services, addOns = [], onClose, defaultDate, defaultClientId, defaultAnimalId }: Props) {
+  const preselected = Boolean(defaultClientId);
   const today = new Date().toISOString().slice(0, 10);
   const allAddOns = useMemo(() => uniqueAddOns(services, addOns), [services, addOns]);
 
@@ -85,8 +86,8 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate }: Pr
 
   const [clients, setClients] = useState<SlimClient[]>([]);
   const [clientSearch, setClientSearch] = useState("");
-  const [clientId, setClientId] = useState("");
-  const [animalId, setAnimalId] = useState("");
+  const [clientId, setClientId] = useState(defaultClientId ?? "");
+  const [animalId, setAnimalId] = useState(defaultAnimalId ?? "");
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const [qName, setQName] = useState("");
@@ -132,7 +133,9 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate }: Pr
   const addOnSummary = selectedAddOns.map((a) => a.name).join(" + ");
   const bookingSummary = addOnSummary ? `${serviceSummary} + ${addOnSummary}` : serviceSummary;
 
-  const stepIdx: Record<Step, number> = { service: 0, slot: 1, client: 2, confirm: 3 };
+  const STEPS: Step[] = preselected ? ["service", "slot"] : ["service", "slot", "client"];
+  const STEP_LABELS = preselected ? ["Services", "Time"] : ["Services", "Time", "Client"];
+  const stepIdx: Record<Step, number> = { service: 0, slot: 1, client: 2, confirm: preselected ? 2 : 3 };
 
   function toggleService(id: string) {
     setSelectedServiceIds((prev) =>
@@ -169,11 +172,18 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate }: Pr
     startTransition(async () => {
       const result = await fetchClientsWithAnimals();
       setClients(result);
-      if (result[0]) {
-        setClientId(result[0].id);
-        setAnimalId(result[0].animals[0]?.id ?? "");
+      if (preselected) {
+        // client already known — skip straight to confirm
+        setClientId(defaultClientId!);
+        setAnimalId(defaultAnimalId ?? result.find((c) => c.id === defaultClientId)?.animals[0]?.id ?? "");
+        setStep("confirm");
+      } else {
+        if (result[0]) {
+          setClientId(result[0].id);
+          setAnimalId(result[0].animals[0]?.id ?? "");
+        }
+        setStep("client");
       }
-      setStep("client");
     });
   }
 

@@ -4,6 +4,8 @@ import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { TopbarSearch } from "@/components/TopbarSearch";
 import { RebookingFilterTabs } from "@/components/RebookingFilterTabs";
+import { RebookButton } from "@/components/RebookButton";
+import { fetchServicesForBooking } from "@/server/actions/booking";
 
 type FilterKey = "overdue" | "due" | "lapsed";
 
@@ -26,7 +28,8 @@ export default async function RebookingPage({
 
   const now = new Date();
 
-  const animals = await db.animal.findMany({
+  const [animals, services] = await Promise.all([
+    db.animal.findMany({
     where: { tenantId: ctx.tenantId, lastVisitAt: { not: null } },
     include: {
       client: true,
@@ -37,7 +40,11 @@ export default async function RebookingPage({
       },
     },
     orderBy: { lastVisitAt: "asc" },
-  });
+    }),
+    fetchServicesForBooking(),
+  ]);
+
+  const allAddOns = services.flatMap((s) => s.addOns ?? []);
 
   function daysSinceVisit(a: typeof animals[0]) {
     return (now.getTime() - a.lastVisitAt!.getTime()) / 86_400_000;
@@ -215,13 +222,12 @@ export default async function RebookingPage({
                   </button>
 
                   {/* Book button */}
-                  <Link
-                    href="/app/calendar"
-                    className="d-btn d-btn-primary"
-                    style={{ padding: "7px 20px", borderRadius: 999, fontSize: 13, flexShrink: 0 }}
-                  >
-                    Book
-                  </Link>
+                  <RebookButton
+                    clientId={a.clientId}
+                    animalId={a.id}
+                    services={services}
+                    addOns={allAddOns}
+                  />
                 </div>
               );
             })

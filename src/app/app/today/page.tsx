@@ -5,6 +5,8 @@ import { db } from "@/server/db";
 import { TodayApptRow } from "@/components/TodayApptRow";
 import { TopbarSearch } from "@/components/TopbarSearch";
 import { appointmentDurationMinutes } from "@/lib/appointment-summary";
+import { RebookButton } from "@/components/RebookButton";
+import { fetchServicesForBooking } from "@/server/actions/booking";
 
 function fmtMoney(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -36,7 +38,7 @@ export default async function TodayPage() {
   const lastWkStart = new Date(dayStart); lastWkStart.setDate(dayStart.getDate() - 7);
   const lastWkEnd   = new Date(dayEnd);   lastWkEnd.setDate(dayEnd.getDate() - 7);
 
-  const [appointments, lastWeekAppts, rebookCandidates] = await Promise.all([
+  const [appointments, lastWeekAppts, rebookCandidates, services] = await Promise.all([
     db.appointment.findMany({
       where:   { tenantId: ctx.tenantId, startsAt: { gte: dayStart, lte: dayEnd } },
       include: {
@@ -58,7 +60,10 @@ export default async function TodayPage() {
       orderBy: { lastVisitAt: "asc" },
       take: 8,
     }),
+    fetchServicesForBooking(),
   ]);
+
+  const allAddOns = services.flatMap((s) => s.addOns ?? []);
 
   const active        = appointments.filter((a) => !["CANCELLED", "NO_SHOW"].includes(a.status));
   const totalCents    = active.reduce((s, a) => s + a.priceCents, 0);
@@ -235,13 +240,12 @@ export default async function TodayPage() {
                     </div>
 
                     {/* Book button */}
-                    <Link
-                      href="/app/calendar"
-                      className="d-btn d-btn-primary"
-                      style={{ padding: "7px 20px", borderRadius: 999, fontSize: 13 }}
-                    >
-                      Book
-                    </Link>
+                    <RebookButton
+                      clientId={a.clientId}
+                      animalId={a.id}
+                      services={services}
+                      addOns={allAddOns}
+                    />
                   </div>
                 );
               })}
