@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { upsertService, upsertAddOn, toggleAddOnActive } from "@/server/actions/services";
+import { upsertService, upsertAddOn, toggleAddOnActive, deleteService, deleteAddOn } from "@/server/actions/services";
 import { TopbarSearch } from "@/components/TopbarSearch";
 
 type Service = {
@@ -348,6 +348,7 @@ function ServiceModal({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [name, setName] = useState(service?.name ?? "");
   const [description, setDescription] = useState(service?.description ?? "");
@@ -375,6 +376,20 @@ function ServiceModal({
         onSaved();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to save. Please try again.");
+      }
+    });
+  }
+
+  function handleDelete() {
+    if (!service?.id) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await deleteService(service.id);
+        onSaved();
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Failed to delete.");
+        setConfirmDelete(false);
       }
     });
   }
@@ -498,7 +513,33 @@ function ServiceModal({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 20, alignItems: "center" }}>
+          {service && (
+            confirmDelete ? (
+              <>
+                <span style={{ fontSize: 12, color: "var(--acc)", fontWeight: 600 }}>Delete this service?</span>
+                <button className="d-btn" style={{ fontSize: 12 }} onClick={() => setConfirmDelete(false)} disabled={isPending}>Cancel</button>
+                <button
+                  className="d-btn"
+                  style={{ fontSize: 12, background: "var(--acc)", borderColor: "var(--acc)", color: "#fff" }}
+                  onClick={handleDelete}
+                  disabled={isPending}
+                >
+                  {isPending ? "Deleting…" : "Yes, delete"}
+                </button>
+              </>
+            ) : (
+              <button
+                className="d-btn"
+                style={{ fontSize: 12, color: "var(--acc)", borderColor: "var(--acc)" }}
+                onClick={() => setConfirmDelete(true)}
+                disabled={isPending}
+              >
+                Delete
+              </button>
+            )
+          )}
+          <div style={{ flex: 1 }} />
           <button className="d-btn" onClick={onClose} disabled={isPending}>Cancel</button>
           <button
             className="d-btn d-btn-primary"
@@ -527,6 +568,7 @@ function AddOnModal({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [name, setName] = useState(addOn?.name ?? "");
   const [description, setDescription] = useState(addOn?.description ?? "");
@@ -562,6 +604,20 @@ function AddOnModal({
         onSaved();
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "Failed to save. Please try again.");
+      }
+    });
+  }
+
+  function handleDelete() {
+    if (!addOn?.id) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await deleteAddOn(addOn.id);
+        onSaved();
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Failed to delete.");
+        setConfirmDelete(false);
       }
     });
   }
@@ -683,7 +739,33 @@ function AddOnModal({
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "flex-end" }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 20, alignItems: "center" }}>
+          {addOn && (
+            confirmDelete ? (
+              <>
+                <span style={{ fontSize: 12, color: "var(--acc)", fontWeight: 600 }}>Delete this add-on?</span>
+                <button className="d-btn" style={{ fontSize: 12 }} onClick={() => setConfirmDelete(false)} disabled={isPending}>Cancel</button>
+                <button
+                  className="d-btn"
+                  style={{ fontSize: 12, background: "var(--acc)", borderColor: "var(--acc)", color: "#fff" }}
+                  onClick={handleDelete}
+                  disabled={isPending}
+                >
+                  {isPending ? "Deleting…" : "Yes, delete"}
+                </button>
+              </>
+            ) : (
+              <button
+                className="d-btn"
+                style={{ fontSize: 12, color: "var(--acc)", borderColor: "var(--acc)" }}
+                onClick={() => setConfirmDelete(true)}
+                disabled={isPending}
+              >
+                Delete
+              </button>
+            )
+          )}
+          <div style={{ flex: 1 }} />
           <button className="d-btn" onClick={onClose} disabled={isPending}>Cancel</button>
           <button
             className="d-btn d-btn-primary"

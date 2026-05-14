@@ -118,3 +118,18 @@ export async function toggleAddOnActive(id: string, active: boolean) {
   revalidatePath("/app/calendar");
   revalidatePath("/app/bookings");
 }
+
+export async function deleteService(id: string) {
+  const ctx = await requireTenantCtx();
+  const apptCount = await db.appointment.count({ where: { serviceId: id, tenantId: ctx.tenantId } });
+  if (apptCount > 0) throw new Error("This service has booking history — deactivate it instead of deleting.");
+  await db.service.deleteMany({ where: { id, tenantId: ctx.tenantId } });
+  revalidatePath("/app/services");
+}
+
+export async function deleteAddOn(id: string) {
+  const ctx = await requireTenantCtx();
+  await db.addOn.deleteMany({ where: { id, tenantId: ctx.tenantId } });
+  revalidatePath("/app/services");
+  revalidatePath("/app/calendar");
+}
