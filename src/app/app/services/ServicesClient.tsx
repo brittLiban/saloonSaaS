@@ -55,7 +55,7 @@ export function ServicesClient({
   tenantName: string;
 }) {
   const router = useRouter();
-  const [services] = useState(initial);
+  const services = initial;
   const [addOns, setAddOns] = useState(initialAddOns);
   const [editTarget, setEditTarget] = useState<Service | "new" | null>(null);
   const [editAddOnTarget, setEditAddOnTarget] = useState<AddOn | "new" | null>(null);

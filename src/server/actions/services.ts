@@ -7,7 +7,7 @@ import { requireTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 
 const UpsertSchema = z.object({
-  id: z.string().cuid().optional(),
+  id: z.string().min(1).optional(),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional().or(z.literal("")),
   durationMinutes: z.coerce.number().int().min(5).max(480),
@@ -20,39 +20,45 @@ const UpsertSchema = z.object({
 });
 
 const UpsertAddOnSchema = z.object({
-  id: z.string().cuid().optional(),
+  id: z.string().min(1).optional(),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional().or(z.literal("")),
   durationMinutes: z.coerce.number().int().min(0).max(480),
   priceCents: z.coerce.number().int().min(0),
   active: z.boolean().default(true),
   species: z.string().max(40).optional().or(z.literal("")),
-  serviceIds: z.array(z.string().cuid()).default([]),
+  serviceIds: z.array(z.string().min(1)).default([]),
 });
 
 export async function upsertService(raw: unknown) {
-  const ctx = await requireTenantCtx();
-  const { id, applyWeightAdjustment, ...data } = UpsertSchema.parse(raw);
+  try {
+    const ctx = await requireTenantCtx();
+    const { id, applyWeightAdjustment, ...data } = UpsertSchema.parse(raw);
 
-  const clean = {
-    name: data.name,
-    description: data.description || null,
-    durationMinutes: data.durationMinutes,
-    bufferBeforeMinutes: data.bufferBeforeMinutes,
-    bufferAfterMinutes: data.bufferAfterMinutes,
-    priceCents: data.priceCents,
-    active: data.active,
-    species: data.species || null,
-    sizeRules: applyWeightAdjustment ? { applyWeightAdjustment: true } : Prisma.JsonNull,
-  };
+    const clean = {
+      name: data.name,
+      description: data.description || null,
+      durationMinutes: data.durationMinutes,
+      bufferBeforeMinutes: data.bufferBeforeMinutes,
+      bufferAfterMinutes: data.bufferAfterMinutes,
+      priceCents: data.priceCents,
+      active: data.active,
+      species: data.species || null,
+      sizeRules: applyWeightAdjustment ? { applyWeightAdjustment: true } : Prisma.JsonNull,
+    };
 
-  if (id) {
-    await db.service.updateMany({ where: { id, tenantId: ctx.tenantId }, data: clean });
-  } else {
-    await db.service.create({ data: { ...clean, tenantId: ctx.tenantId } });
+    if (id) {
+      await db.service.updateMany({ where: { id, tenantId: ctx.tenantId }, data: clean });
+    } else {
+      await db.service.create({ data: { ...clean, tenantId: ctx.tenantId } });
+    }
+
+    revalidatePath("/app/services");
+  } catch (err) {
+    console.error("[upsertService]", err);
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    throw new Error(msg.includes("Unique constraint") ? `A service named "${(raw as Record<string, unknown>)?.name}" already exists.` : msg);
   }
-
-  revalidatePath("/app/services");
 }
 
 export async function toggleServiceActive(id: string, active: boolean) {
@@ -85,29 +91,33 @@ export async function upsertAddOn(raw: unknown) {
     }
   }
 
-  await db.$transaction(async (tx) => {
-    let addOnId = id;
+  try {
+    await db.$transaction(async (tx) => {
+      let addOnId = id;
 
-    if (id) {
-      const existing = await tx.addOn.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
-      if (!existing) throw new Error("Add-on not found.");
+      if (id) {
+        const existing = await tx.addOn.findFirst({ where: { id, tenantId: ctx.tenantId }, select: { id: true } });
+        if (!existing) throw new Error("Add-on not found.");
+        await tx.addOn.update({ where: { id }, data: clean });
+      } else {
+        const created = await tx.addOn.create({ data: { ...clean, tenantId: ctx.tenantId } });
+        addOnId = created.id;
+      }
 
-      await tx.addOn.update({ where: { id }, data: clean });
-    } else {
-      const created = await tx.addOn.create({ data: { ...clean, tenantId: ctx.tenantId } });
-      addOnId = created.id;
-    }
+      if (!addOnId) throw new Error("Add-on could not be saved.");
 
-    if (!addOnId) throw new Error("Add-on could not be saved.");
-
-    await tx.serviceAddOn.deleteMany({ where: { addOnId } });
-    if (uniqueServiceIds.length > 0) {
-      await tx.serviceAddOn.createMany({
-        data: uniqueServiceIds.map((serviceId) => ({ addOnId, serviceId })),
-        skipDuplicates: true,
-      });
-    }
-  });
+      await tx.serviceAddOn.deleteMany({ where: { addOnId } });
+      if (uniqueServiceIds.length > 0) {
+        await tx.serviceAddOn.createMany({
+          data: uniqueServiceIds.map((serviceId) => ({ addOnId, serviceId })),
+          skipDuplicates: true,
+        });
+      }
+    });
+  } catch (err) {
+    console.error("[upsertAddOn]", err);
+    throw err instanceof Error ? err : new Error("Failed to save add-on.");
+  }
 
   revalidatePath("/app/services");
   revalidatePath("/app/calendar");
