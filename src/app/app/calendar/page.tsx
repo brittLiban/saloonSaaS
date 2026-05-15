@@ -117,7 +117,7 @@ export default async function CalendarPage({
     db.tenant.findUnique({ where: { id: ctx.tenantId }, select: { timezone: true } }),
     db.service.findMany({
       where: { tenantId: ctx.tenantId, active: true },
-      select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
+      select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true, sizeRules: true },
       orderBy: { name: "asc" },
     }),
     db.addOn.findMany({
@@ -130,6 +130,10 @@ export default async function CalendarPage({
   const addOns = addOnRows.map(({ serviceLinks, ...addOn }) => ({
     ...addOn,
     serviceIds: serviceLinks.map((link) => link.serviceId),
+  }));
+  const parsedServices = services.map(({ sizeRules, ...s }) => ({
+    ...s,
+    applyWeightAdjustment: !!(sizeRules && typeof sizeRules === "object" && (sizeRules as Record<string, unknown>).applyWeightAdjustment),
   }));
 
   /* ── WEEK view ── */
@@ -147,7 +151,7 @@ export default async function CalendarPage({
     return (
       <>
         <header className="topbar">
-          <CalendarNav view="week" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} addOns={addOns} />
+          <CalendarNav view="week" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={parsedServices} addOns={addOns} />
         </header>
         <div className="dash-content" style={{ paddingBottom: 40 }}>
           <div style={{ overflowX: "auto" }}>
@@ -200,7 +204,7 @@ export default async function CalendarPage({
     return (
       <>
         <header className="topbar">
-          <CalendarNav view="day" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} addOns={addOns} />
+          <CalendarNav view="day" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={parsedServices} addOns={addOns} />
         </header>
         <div className="dash-content" style={{ paddingBottom: 40 }}>
           <div style={{ background: "#fff", borderRadius: 18, border: "1px solid var(--d-line-2)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>
@@ -254,7 +258,7 @@ export default async function CalendarPage({
   return (
     <>
       <header className="topbar">
-        <CalendarNav view="month" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={services} addOns={addOns} />
+        <CalendarNav view="month" weekOffset={weekOffset} dayOffset={dayOffset} monthOffset={monthOffset} label={label} services={parsedServices} addOns={addOns} />
       </header>
       <div className="dash-content" style={{ paddingBottom: 40 }}>
         <div style={{ background: "#fff", borderRadius: 18, border: "1px solid var(--d-line-2)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", overflow: "hidden" }}>

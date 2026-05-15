@@ -6,6 +6,7 @@ import {
   fetchAvailableSlots,
   fetchClientsWithAnimals,
   quickCreateClientWithAnimal,
+  type DogSize,
   type SlimAddOn,
   type SlimClient,
   type SlimService,
@@ -96,6 +97,8 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
   const [qSpecies, setQSpecies] = useState("dog");
   const [qVaccinated, setQVaccinated] = useState<"true" | "false" | "null">("null");
 
+  const [dogSize, setDogSize] = useState<DogSize | "">("");
+
   const [done, setDone] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictInfo[] | null>(null);
 
@@ -127,7 +130,9 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
 
   const selectedClient = clients.find((c) => c.id === clientId);
   const selectedAnimal = selectedClient?.animals.find((a) => a.id === animalId);
-  const totalDuration = [...selectedServices, ...selectedAddOns].reduce((s, i) => s + i.durationMinutes, 0);
+  const weightApplicable = selectedServices.some((s) => s.applyWeightAdjustment);
+  const weightExtraMinutes = (weightApplicable && dogSize) ? (dogSize === "large" ? 60 : dogSize === "medium" ? 30 : 0) : 0;
+  const totalDuration = [...selectedServices, ...selectedAddOns].reduce((s, i) => s + i.durationMinutes, 0) + weightExtraMinutes;
   const totalPrice = [...selectedServices, ...selectedAddOns].reduce((s, i) => s + i.priceCents, 0);
   const serviceSummary = selectedServices.map((s) => s.name).join(" + ");
   const addOnSummary = selectedAddOns.map((a) => a.name).join(" + ");
@@ -157,7 +162,12 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
     setError(null);
     startTransition(async () => {
       try {
-        const result = await fetchAvailableSlots({ serviceIds: selectedServiceIds, addOnIds: activeSelectedAddOnIds, date });
+        const result = await fetchAvailableSlots({
+          serviceIds: selectedServiceIds,
+          addOnIds: activeSelectedAddOnIds,
+          date,
+          dogSize: (weightApplicable && dogSize) ? dogSize : undefined,
+        });
         setSlots(result);
         setSelectedSlot(null);
         setStep("slot");
@@ -221,6 +231,7 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
           addOnIds: activeSelectedAddOnIds,
           startsAt: new Date(selectedSlot.startsAt),
           force,
+          dogSize: (weightApplicable && dogSize) ? dogSize : undefined,
         });
         if (!result.ok) {
           setConflicts(result.conflicts);
@@ -401,6 +412,37 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
               ) : (
                 <div style={{ padding: "16px", background: "oklch(1 0 0 / 0.5)", borderRadius: 10, border: "1.5px solid var(--d-line-2)", fontSize: 13, color: "var(--d-ink-3)", textAlign: "center" }}>
                   No add-ons available for this service.
+                </div>
+              )}
+
+              {weightApplicable && (
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "var(--d-ink-2)", display: "block", marginBottom: 6 }}>Dog size</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {(["small", "medium", "large"] as const).map((size) => {
+                      const label = size === "small" ? "Small" : size === "medium" ? "Medium" : "Large";
+                      const weight = size === "small" ? "Under 20 lbs" : size === "medium" ? "20 – 49 lbs" : "50+ lbs";
+                      const extra = size === "small" ? "+0 min" : size === "medium" ? "+30 min" : "+60 min";
+                      const selected = dogSize === size;
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => setDogSize(size)}
+                          style={{
+                            flex: 1, padding: "10px 6px", borderRadius: 10, cursor: "pointer", textAlign: "center",
+                            border: selected ? "2px solid var(--oxblood)" : "1.5px solid var(--d-line-2)",
+                            background: selected ? "oklch(from var(--oxblood) l c h / 0.07)" : "oklch(1 0 0 / 0.7)",
+                            transition: "all 0.12s",
+                          }}
+                        >
+                          <div style={{ fontSize: 13, fontWeight: 700, color: selected ? "var(--oxblood)" : "var(--d-ink)" }}>{label}</div>
+                          <div style={{ fontSize: 11, color: "var(--d-ink-4)", marginTop: 2 }}>{weight}</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: selected ? "var(--oxblood)" : "var(--d-ink-3)", marginTop: 3 }}>{extra}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -618,6 +660,7 @@ export function BookingModal({ services, addOns = [], onClose, defaultDate, defa
                   ["Date", selectedSlot ? fmtDate(selectedSlot.startsAt) : ""],
                   ["Time", selectedSlot ? `${fmtTime(selectedSlot.startsAt)} – ${fmtTime(selectedSlot.endsAt)}` : ""],
                   ["Duration", `${totalDuration} min`],
+                  ...(weightExtraMinutes > 0 ? [["Weight adj.", `+${weightExtraMinutes} min (${dogSize} dog)`] as [string, string]] : []),
                   ["Total", fmtMoney(totalPrice)],
                 ] as [string, string][]).map(([label, value]) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "7px 0", borderBottom: "1px solid oklch(from var(--oxblood) l c h / 0.1)", fontSize: 14 }}>

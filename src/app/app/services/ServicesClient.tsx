@@ -16,6 +16,7 @@ type Service = {
   priceCents: number;
   active: boolean;
   species: string | null;
+  applyWeightAdjustment: boolean;
   addOnLinks?: { addOnId: string }[];
 };
 
@@ -305,6 +306,77 @@ export function ServicesClient({
             })}
           </div>
         )}
+
+        {/* Weight Rules */}
+        <div style={{ marginTop: 34, marginBottom: 12 }}>
+          <div style={{ fontFamily: "var(--dash-sans)", fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>
+            Weight Rules
+          </div>
+          <div style={{ fontSize: 13, color: "var(--d-ink-3)", marginTop: 3 }}>
+            Extra time added based on dog size. Enable per-service in the service editor.
+          </div>
+        </div>
+
+        <div style={{ background: "#fff", borderRadius: 12, border: "1px solid var(--d-line-2)", padding: "20px 24px" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 20 }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--d-line)" }}>
+                <th style={{ padding: "6px 0", fontWeight: 700, textAlign: "left", color: "var(--d-ink-2)", fontSize: 12 }}>SIZE</th>
+                <th style={{ padding: "6px 0", fontWeight: 700, textAlign: "left", color: "var(--d-ink-2)", fontSize: 12 }}>WEIGHT</th>
+                <th style={{ padding: "6px 0", fontWeight: 700, textAlign: "left", color: "var(--d-ink-2)", fontSize: 12 }}>EXTRA TIME</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { size: "Small", weight: "Under 20 lbs", extra: "+0 min" },
+                { size: "Medium", weight: "20 – 49 lbs", extra: "+30 min" },
+                { size: "Large", weight: "50 lbs & up", extra: "+60 min" },
+              ].map((row) => (
+                <tr key={row.size} style={{ borderBottom: "1px solid var(--d-line)" }}>
+                  <td style={{ padding: "10px 0", fontWeight: 600 }}>{row.size}</td>
+                  <td style={{ padding: "10px 0", color: "var(--d-ink-3)" }}>{row.weight}</td>
+                  <td style={{ padding: "10px 0", fontFamily: "var(--dash-mono)", fontWeight: 700, color: "var(--acc)" }}>{row.extra}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--d-ink-2)", marginBottom: 8, letterSpacing: "0.05em" }}>
+            WEIGHT ADJUSTMENT ON
+          </div>
+          {(() => {
+            const weightServices = activeServices.filter((s) => s.applyWeightAdjustment);
+            if (weightServices.length === 0) {
+              return (
+                <div style={{ fontSize: 13, color: "var(--d-ink-4)" }}>
+                  No services have weight adjustment enabled. Open a service to turn it on.
+                </div>
+              );
+            }
+            return (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {weightServices.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setEditTarget(s)}
+                    style={{
+                      padding: "5px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600,
+                      border: "1.5px solid var(--acc)", background: "oklch(from var(--acc) l c h / 0.08)",
+                      color: "var(--acc)", cursor: "pointer",
+                    }}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
+          <div style={{ marginTop: 16, fontSize: 12, color: "var(--d-ink-4)", lineHeight: 1.5 }}>
+            Formula: service base time + weight adjustment + add-on time.<br />
+            Each add-on adds 30 min on top. Weight adjustment applies to dogs only.
+          </div>
+        </div>
       </div>
 
       {editTarget !== null && (
@@ -346,6 +418,7 @@ function ServiceModal({
   const [bufferAfter, setBufferAfter] = useState(String(service?.bufferAfterMinutes ?? 0));
   const [price, setPrice] = useState(service ? String(service.priceCents / 100) : "");
   const [species, setSpecies] = useState(service?.species ?? "");
+  const [applyWeightAdjustment, setApplyWeightAdjustment] = useState(service?.applyWeightAdjustment ?? false);
 
   function handleSubmit() {
     setError(null);
@@ -361,6 +434,7 @@ function ServiceModal({
           priceCents: Math.round(Number(price) * 100),
           active: service?.active ?? true,
           species: species || undefined,
+          applyWeightAdjustment,
         });
         onSaved();
       } catch (e: unknown) {
@@ -483,6 +557,25 @@ function ServiceModal({
               <option value="Bird">Bird</option>
               <option value="Rabbit">Rabbit</option>
             </select>
+          </Field>
+
+          <Field label="Weight adjustment">
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 12px", borderRadius: 10, border: "1.5px solid var(--d-line-2)", background: applyWeightAdjustment ? "oklch(from var(--acc) l c h / 0.06)" : "transparent" }}>
+              <input
+                type="checkbox"
+                checked={applyWeightAdjustment}
+                onChange={(e) => setApplyWeightAdjustment(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: "var(--acc)", flexShrink: 0 }}
+              />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: applyWeightAdjustment ? "var(--acc)" : "var(--d-ink)" }}>
+                  Add extra time based on dog size
+                </div>
+                <div style={{ fontSize: 12, color: "var(--d-ink-4)", marginTop: 1 }}>
+                  Small +0 min · Medium +30 min · Large +60 min
+                </div>
+              </div>
+            </label>
           </Field>
 
           <Field label="Description (optional)">

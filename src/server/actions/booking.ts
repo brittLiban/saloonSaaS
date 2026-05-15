@@ -23,6 +23,7 @@ export type SlimService = {
   bufferAfterMinutes: number;
   priceCents: number;
   species: string | null;
+  applyWeightAdjustment: boolean;
   addOns?: SlimAddOn[];
 };
 
@@ -39,12 +40,15 @@ export type TimeSlot = {
   available: boolean;
 };
 
+export type DogSize = "small" | "medium" | "large";
+
 export type AvailabilityRequest = {
   serviceId?: string;
   serviceIds?: string[];
   addOnIds?: string[];
   durationMinutes?: number;
   date: string;
+  dogSize?: DogSize;
 };
 
 export async function fetchServicesForBooking(): Promise<SlimService[]> {
@@ -59,6 +63,7 @@ export async function fetchServicesForBooking(): Promise<SlimService[]> {
       bufferAfterMinutes: true,
       priceCents: true,
       species: true,
+      sizeRules: true,
       addOnLinks: {
         where: { addOn: { active: true } },
         select: {
@@ -71,8 +76,9 @@ export async function fetchServicesForBooking(): Promise<SlimService[]> {
     orderBy: { name: "asc" },
   });
 
-  return services.map(({ addOnLinks, ...service }) => ({
+  return services.map(({ addOnLinks, sizeRules, ...service }) => ({
     ...service,
+    applyWeightAdjustment: !!(sizeRules && typeof sizeRules === "object" && (sizeRules as Record<string, unknown>).applyWeightAdjustment),
     addOns: addOnLinks.map((link) => ({
       id: link.addOn.id,
       name: link.addOn.name,
@@ -142,12 +148,16 @@ export async function fetchAvailableSlots(input: string | AvailabilityRequest, d
 
   if (!request.date) return [];
 
+  const weightAdjustmentMinutes =
+    request.dogSize === "large" ? 60 : request.dogSize === "medium" ? 30 : 0;
+
   const composition = await resolveAppointmentComposition({
     tenantId: ctx.tenantId,
     serviceId: request.serviceId,
     serviceIds: request.serviceIds,
     addOnIds: request.addOnIds,
     durationMinutes: request.durationMinutes,
+    weightAdjustmentMinutes,
   }).catch(() => null);
   if (!composition) return [];
 

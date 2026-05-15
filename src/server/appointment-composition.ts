@@ -8,6 +8,7 @@ export type AppointmentCompositionInput = {
   addOns?: string[];
   durationMinutes?: number;
   priceCents?: number;
+  weightAdjustmentMinutes?: number;
 };
 
 type ServiceLine = {
@@ -55,6 +56,7 @@ export async function resolveAppointmentComposition(input: AppointmentCompositio
       priceCents: true,
       bufferBeforeMinutes: true,
       bufferAfterMinutes: true,
+      sizeRules: true,
     },
   });
 
@@ -93,10 +95,15 @@ export async function resolveAppointmentComposition(input: AppointmentCompositio
     };
   });
 
-  const calculatedDuration = [
+  const baseDuration = [
     ...orderedServices.map((service) => service.durationMinutes),
     ...orderedAddOns.map((addOn) => addOn.durationMinutes),
   ].reduce((sum, minutes) => sum + minutes, 0);
+
+  const weightApplies = orderedServices.some(
+    (s) => s.sizeRules && typeof s.sizeRules === "object" && (s.sizeRules as Record<string, unknown>).applyWeightAdjustment,
+  );
+  const calculatedDuration = baseDuration + (weightApplies ? (input.weightAdjustmentMinutes ?? 0) : 0);
 
   const calculatedPrice = [
     ...orderedServices.map((service) => service.priceCents),

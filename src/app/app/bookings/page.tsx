@@ -127,7 +127,7 @@ export default async function BookingsPage({
     }),
     db.service.findMany({
       where: { tenantId: ctx.tenantId, active: true },
-      select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true },
+      select: { id: true, name: true, durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true, priceCents: true, species: true, sizeRules: true },
       orderBy: { name: "asc" },
     }),
     db.addOn.findMany({
@@ -153,6 +153,10 @@ export default async function BookingsPage({
   const addOns = addOnRows.map(({ serviceLinks, ...addOn }) => ({
     ...addOn,
     serviceIds: serviceLinks.map((link) => link.serviceId),
+  }));
+  const parsedServices = services.map(({ sizeRules, ...s }) => ({
+    ...s,
+    applyWeightAdjustment: !!(sizeRules && typeof sizeRules === "object" && (sizeRules as Record<string, unknown>).applyWeightAdjustment),
   }));
 
   // Build chart buckets
@@ -206,7 +210,7 @@ export default async function BookingsPage({
             </svg>
             <span className="topbar-bell-dot" />
           </button>
-          <CalendarActions services={services} addOns={addOns} />
+          <CalendarActions services={parsedServices} addOns={addOns} />
         </div>
       </header>
 

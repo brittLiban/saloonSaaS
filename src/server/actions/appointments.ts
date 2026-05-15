@@ -19,6 +19,7 @@ const CreateSchema = z.object({
   durationMinutes: z.number().int().positive().optional(),
   priceCents: z.number().int().nonnegative().optional(),
   force: z.boolean().optional().default(false),
+  dogSize: z.enum(["small", "medium", "large"]).optional(),
 });
 
 const UpdateStatusSchema = z.object({
@@ -41,6 +42,9 @@ export async function createAppointment(raw: unknown): Promise<{ ok: true } | { 
   const ctx = await requireTenantCtx();
   const data = CreateSchema.parse(raw);
 
+  const weightAdjustmentMinutes =
+    data.dogSize === "large" ? 60 : data.dogSize === "medium" ? 30 : 0;
+
   const composition = await resolveAppointmentComposition({
     tenantId: ctx.tenantId,
     serviceId: data.serviceId,
@@ -49,6 +53,7 @@ export async function createAppointment(raw: unknown): Promise<{ ok: true } | { 
     addOns: data.addOns,
     durationMinutes: data.durationMinutes,
     priceCents: data.priceCents,
+    weightAdjustmentMinutes,
   });
 
   const endsAt = new Date(data.startsAt.getTime() + composition.durationMinutes * 60_000);

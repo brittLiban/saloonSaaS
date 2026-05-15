@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
@@ -15,6 +16,7 @@ const UpsertSchema = z.object({
   priceCents: z.coerce.number().int().min(0),
   active: z.boolean().default(true),
   species: z.string().max(40).optional().or(z.literal("")),
+  applyWeightAdjustment: z.boolean().optional(),
 });
 
 const UpsertAddOnSchema = z.object({
@@ -30,7 +32,7 @@ const UpsertAddOnSchema = z.object({
 
 export async function upsertService(raw: unknown) {
   const ctx = await requireTenantCtx();
-  const { id, ...data } = UpsertSchema.parse(raw);
+  const { id, applyWeightAdjustment, ...data } = UpsertSchema.parse(raw);
 
   const clean = {
     name: data.name,
@@ -41,6 +43,7 @@ export async function upsertService(raw: unknown) {
     priceCents: data.priceCents,
     active: data.active,
     species: data.species || null,
+    sizeRules: applyWeightAdjustment ? { applyWeightAdjustment: true } : Prisma.JsonNull,
   };
 
   if (id) {

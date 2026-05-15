@@ -25,6 +25,7 @@ export default async function ServicesPage() {
         priceCents: true,
         active: true,
         species: true,
+        sizeRules: true,
         addOnLinks: { select: { addOnId: true } },
       },
     }),
@@ -57,5 +58,10 @@ export default async function ServicesPage() {
     monthlyCounts.map((c) => [c.serviceId, c._count.serviceId])
   );
 
-  return <ServicesClient services={services} addOns={addOns} monthlyCountMap={countMap} tenantName={ctx.name} />;
+  const parsedServices = services.map(({ sizeRules, ...s }) => ({
+    ...s,
+    applyWeightAdjustment: !!(sizeRules && typeof sizeRules === "object" && (sizeRules as Record<string, unknown>).applyWeightAdjustment),
+  }));
+
+  return <ServicesClient services={parsedServices} addOns={addOns} monthlyCountMap={countMap} tenantName={ctx.name} />;
 }
