@@ -44,8 +44,8 @@ jobs:
           target: ${{ matrix.target }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/${{ matrix.image }}:latest
-            ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+            ghcr.io/brittliban/saloonsaas/${{ matrix.image }}:latest
+            ghcr.io/brittliban/saloonsaas/${{ matrix.image }}:${{ github.sha }}
           # Layer cache — makes rebuilds ~3-5x faster after the first run
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
