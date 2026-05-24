@@ -60,27 +60,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # webfactory/ssh-agent handles ed25519 keys reliably
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known hosts
+        run: ssh-keyscan -H 46.224.179.157 >> ~/.ssh/known_hosts
+
       # Push updated docker-compose.yml to server so it's always in sync
       - name: Sync docker-compose.yml to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: 46.224.179.157
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: docker-compose.yml
-          target: /opt/pawreception
+        run: scp docker-compose.yml root@46.224.179.157:/opt/pawreception/docker-compose.yml
 
       - name: Pull images & restart containers
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 46.224.179.157
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
+        env:
+          CR_PAT: ${{ secrets.CR_PAT }}
+        run: |
+          ssh root@46.224.179.157 "bash -s" << EOF
             set -e
 
             # Authenticate with ghcr.io so the server can pull private images
-            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u brittliban --password-stdin
+            echo "${CR_PAT}" | docker login ghcr.io -u brittliban --password-stdin
 
             cd /opt/pawreception
 
@@ -93,4 +94,5 @@ jobs:
             # Free up disk space from old image layers
             docker image prune -f
 
-            echo "✅ Deploy complete"
+            echo "Deploy complete"
+          EOF
