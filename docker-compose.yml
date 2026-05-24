@@ -59,6 +59,7 @@ services:
   # One-shot: runs prisma migrate deploy then exits.
   # web and worker wait for this to complete before starting.
   migrate:
+    image: ghcr.io/brittliban/saloonsaas/migrate:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -71,6 +72,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-glasshound}:${POSTGRES_PASSWORD:-glasshound_dev_password}@postgres:5432/${POSTGRES_DB:-glasshound}?schema=public
 
   web:
+    image: ghcr.io/brittliban/saloonsaas/web:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -104,6 +106,7 @@ services:
       - proxy-net
 
   worker:
+    image: ghcr.io/brittliban/saloonsaas/worker:latest
     build:
       context: .
       dockerfile: Dockerfile

@@ -1,0 +1,96 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ── Build & push all three images in parallel ───────────────────────────────
+  build:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write   # needed to push to ghcr.io
+
+    strategy:
+      matrix:
+        include:
+          - target: runner
+            image: web
+          - target: worker
+            image: worker
+          - target: migrate
+            image: migrate
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.image }}:latest
+            ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          # Layer cache — makes rebuilds ~3-5x faster after the first run
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # ── Deploy to Hetzner ───────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Hetzner
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Push updated docker-compose.yml to server so it's always in sync
+      - name: Sync docker-compose.yml to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 46.224.179.157
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: docker-compose.yml
+          target: /opt/pawreception
+
+      - name: Pull images & restart containers
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 46.224.179.157
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            # Authenticate with ghcr.io so the server can pull private images
+            echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u brittliban --password-stdin
+
+            cd /opt/pawreception
+
+            # Pull the newly built images
+            docker compose pull
+
+            # Recreate changed containers — volumes (postgres, redis, minio) are untouched
+            docker compose up -d --remove-orphans
+
+            # Free up disk space from old image layers
+            docker image prune -f
+
+            echo "✅ Deploy complete"
