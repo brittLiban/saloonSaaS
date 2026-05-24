@@ -60,24 +60,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # webfactory/ssh-agent handles ed25519 keys reliably
-      - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add server to known hosts
-        run: ssh-keyscan -H 46.224.179.157 >> ~/.ssh/known_hosts
+      # Decode the base64-encoded key — avoids CRLF corruption from Windows paste
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 46.224.179.157 >> ~/.ssh/known_hosts
 
       # Push updated docker-compose.yml to server so it's always in sync
       - name: Sync docker-compose.yml to server
-        run: scp docker-compose.yml root@46.224.179.157:/opt/pawreception/docker-compose.yml
+        run: scp -i ~/.ssh/deploy_key docker-compose.yml root@46.224.179.157:/opt/pawreception/docker-compose.yml
 
       - name: Pull images & restart containers
         env:
           CR_PAT: ${{ secrets.CR_PAT }}
         run: |
-          ssh root@46.224.179.157 "bash -s" << EOF
+          ssh -i ~/.ssh/deploy_key root@46.224.179.157 "bash -s" << EOF
             set -e
 
             # Authenticate with ghcr.io so the server can pull private images
