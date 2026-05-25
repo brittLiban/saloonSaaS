@@ -15,7 +15,21 @@
 - **Deployment:** Docker Compose on Hetzner, CD via GitHub Actions → ghcr.io
 
 ## Competitive reference
-All features in this roadmap are benchmarked against **MoeGo** — the current market leader in pet grooming SaaS. The `moego_features_deep_dive.html` file in this repo contains the full breakdown of their feature set with UX notes. Use it as a reference for design decisions.
+All features in this roadmap are benchmarked against **MoeGo** — the current market leader in pet grooming SaaS. The `moego_features_deep_dive.html` file in this repo contains the full breakdown of their feature set with UX notes. A full third-party assessment is in `MoeGo_assessment.md`. Use both as reference for design decisions.
+
+### Competitor pricing (as of May 2026)
+| Product | Starting price | Key weakness vs. us |
+|---------|---------------|---------------------|
+| **MoeGo** | $79/mo (Basic), $149/mo (Growth), $239/mo (Ultimate) | Expensive; desktop-centric for advanced settings; API only on Enterprise |
+| DaySmart Pet | $29/mo | Less grooming-specific; fragmented feature tiers |
+| Gingr | $105/mo (Spa) | Kennel/daycare first, grooming is secondary |
+| Pawfinity | $55–$110/mo | Less modern UX; smaller community |
+| KennelBooker | $49.99/mo | Boarding-centric; weaker grooming workflows |
+
+### Our pricing strategy
+MoeGo charges $149/mo for features that grooming shops actually need (Growth tier). Our target: **$79/mo** for a plan that matches MoeGo Growth in grooming-specific features. We win on price, not on being cheaper — we win because we're purpose-built and simpler. SaaS billing (charging our tenant customers) is covered in the CD pipeline and will be implemented with Stripe Billing after the core product is stable (post Sprint 7).
+
+> **Key insight from the assessment:** MoeGo's biggest weaknesses are (1) premium pricing at the tiers shops actually want, (2) advanced settings requiring desktop, (3) a weak client-side app (3.2/5 App Store vs. 4.6/5 business app). These are our three design targets: mobile-first for everything, no desktop-only features, fair pricing.
 
 ---
 
@@ -33,6 +47,10 @@ All features in this roadmap are benchmarked against **MoeGo** — the current m
 | 8 | Business reporting | Shops need data to make staffing/pricing decisions |
 | 9 | Abandoned booking recovery | Recover dropped bookings — $29.75M recovered by MoeGo users in 2024 |
 | 10 | Two-way SMS + review booster | Communications layer + Google review automation |
+| 11 | Smart scheduling | Recurring appointments, conflict detection, multi-staff view — saves 15+ min/day |
+| 12 | Staff payroll & commission | Clock in/out, commission rules, tip splitting — replaces a separate HR tool |
+| 13 | Retail & inventory | Sell products at checkout — adds an avg $12–18/visit revenue layer |
+| 14 | Marketing integrations | Reserve with Google, QuickBooks, Google Analytics — closes the loop on acquisition + accounting |
 
 ---
 
@@ -809,6 +827,347 @@ model Waitlist {
 - In reports tab: "Reviews" section
 - Total requests sent, response rate, average rating, per-groomer breakdown
 - **Acceptance criteria:** Sending 10 review requests and receiving 7 responses shows 70% response rate.
+
+---
+
+# SPRINT 11 — Smart Scheduling
+**Duration:** 2 weeks  
+**Goal:** The calendar prevents double-bookings, supports recurring appointments, and gives a clear multi-staff view. Owners report going from 20+ min of manual scheduling per day to under 5 min after this feature.
+
+### Why this sprint
+MoeGo case studies consistently cite Smart Schedule as one of the top time-savers. Currently the app has a basic calendar but no conflict detection, no recurring appointment engine, and no "schedule from history" shortcut. These are daily frustrations for any shop with 2+ groomers.
+
+### Background & design decisions
+- **Conflict detection** must be server-side (not just UI) — two staff members could be scheduling simultaneously
+- **Recurring appointments** store a `recurrenceRule` (RRULE format) and generate future `Appointment` rows up to 6 months ahead, checked for conflicts before placement
+- **Multi-staff view**: color-coded columns per groomer, each card shows pet name, breed, service, duration, status, and behavior flags — no hover needed for critical info
+- **Schedule from history**: one-click "rebook same" from any past appointment pre-fills the new appointment form
+
+### Schema changes needed
+```prisma
+// Add to Appointment model:
+recurrenceId    String?   // links recurring instances to a parent rule
+recurrenceRule  String?   // RRULE string (e.g. "FREQ=WEEKLY;INTERVAL=4")
+isRecurring     Boolean   @default(false)
+
+model RecurrenceRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  clientId    String
+  animalId    String
+  serviceId   String
+  staffUserId String?
+  rrule       String   // RRULE format
+  startsAt    DateTime // time of day for the appointment
+  durationMinutes Int
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(...)
+  appointments Appointment[]
+}
+```
+
+### Technical tasks
+
+#### T11.1 — Server-side conflict detection
+- Create `src/lib/conflict-detection.ts` with `checkConflict(tenantId, staffUserId, startsAt, endsAt, excludeAppointmentId?): boolean`
+- Checks against existing `CONFIRMED` + `REQUESTED` appointments for the same staff member in the same time window
+- Also checks `AvailabilityBlock` (blocked time)
+- Call this in `createAppointment` and `updateAppointment` server actions — reject if conflict detected
+- **Acceptance criteria:** Creating two appointments for the same groomer at 10am throws a validation error. Editing an appointment to overlap with another also fails. Unit tests for edge cases (back-to-back is OK, 1-minute overlap is not).
+
+#### T11.2 — Buffer time enforcement
+- `Service.bufferBeforeMinutes` and `Service.bufferAfterMinutes` already exist in schema
+- Conflict detection must include buffer windows: effective slot = `startsAt - bufferBefore` to `endsAt + bufferAfter`
+- Show buffer visually on calendar as a lighter shaded band around the appointment block
+- **Acceptance criteria:** A 60-min service with 15-min buffer after blocks a 75-min window. Attempting to schedule during the buffer window fails conflict check.
+
+#### T11.3 — Recurring appointment engine
+- Create `createRecurringAppointment(rule: RecurrenceRule)` server action
+- Uses `rrule` npm package to expand RRULE into future dates (up to 26 weeks / 6 months)
+- For each date: run conflict check before inserting — skip conflicted dates and report them back to staff
+- UI: "Make recurring" toggle on appointment form → recurrence picker (weekly, every 2/4/6/8 weeks, custom)
+- **Acceptance criteria:** Setting "every 4 weeks" creates appointments at correct dates for 6 months. Any conflicted date is skipped and shown to staff as a warning. Deleting one instance asks "delete this only or all future?"
+
+#### T11.4 — Multi-staff calendar columns
+- Calendar page: toggle between "day view by groomer" (columns per groomer) and "week view"
+- Each appointment card shows: pet name, breed, service badge, duration, status dot, behavior flag icon (if any)
+- Color-coded per groomer (each groomer has a persistent color)
+- Drag-to-reschedule (optional stretch goal — do not block sprint on this)
+- **Acceptance criteria:** Day view shows one column per active staff member. Appointment cards show required info without expanding. Switching between day and week view is instant.
+
+#### T11.5 — Schedule from history
+- On any past `COMPLETED` appointment: "Rebook same" button
+- Opens new appointment form pre-filled with: same client, pet, service, groomer, duration, price
+- Date defaults to today + pet's preferred cadence days (`Animal.preferredCadenceDays`) or service interval
+- **Acceptance criteria:** Clicking "Rebook same" on a past appointment opens the create form pre-filled. Staff only needs to pick a date.
+
+#### T11.6 — Smart alerts for scheduling
+- Overcapacity alert: if day's confirmed appointments > tenant-configured max daily capacity, show banner on calendar
+- Duplicate booking alert: if same pet is already booked on the same day, warn before saving (not a hard block — staff can override)
+- Behavioral flag alert at check-in: if pet has behavior notes (bite history, severe anxiety), show a forced acknowledgment modal at the check-in step — not just a passive note
+- **Acceptance criteria:** Booking pet twice in one day shows warning. Checking in a bite-risk pet shows a modal that requires a "I acknowledge" click before proceeding.
+
+---
+
+# SPRINT 12 — Staff Payroll & Commission
+**Duration:** 2 weeks  
+**Goal:** Shop owners can track groomer hours, calculate commission, split tips, and generate a payroll report — all from Glasshound. Replaces a separate spreadsheet or HR tool.
+
+### Why this sprint
+MoeGo positions payroll/commission as a Growth-tier differentiator ($149/mo). Grooming shops with 2+ groomers spend significant time calculating commission manually. This feature is a direct retention driver — once a shop's payroll runs through us, switching cost is very high.
+
+### Background & design decisions
+- **Commission model:** percentage per service per groomer (e.g. Jane gets 45% on full grooms, 35% on baths). Flat rate per appointment is also supported.
+- **Tip splitting:** tips entered at checkout are split according to configurable rules (e.g. groomer gets 100%, or groomer/bather split 70/30)
+- **Clock in/out:** simple timestamp-based, not GPS. Staff clock in via the app. Hours calculated from clock records.
+- **Payroll report:** not a full payroll processor (no tax filing) — a report that feeds into whatever payroll tool the owner uses (ADP, Gusto, manual checks)
+
+### Schema changes needed
+```prisma
+model CommissionRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String   // the staff member
+  serviceId   String?  // null = applies to all services
+  type        String   // 'percentage' | 'flat'
+  value       Decimal  // percentage (e.g. 45.00) or flat cents (e.g. 1500)
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(...)
+}
+
+model ClockEntry {
+  id          String    @id @default(cuid())
+  tenantId    String
+  userId      String
+  clockedInAt DateTime
+  clockedOutAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(...)
+}
+
+model TipSplitRule {
+  id          String   @id @default(cuid())
+  tenantId    String
+  groomerPct  Decimal  @default(100)
+  batherPct   Decimal  @default(0)
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(...)
+}
+
+// Add to Appointment model:
+tipCents     Int   @default(0)
+tipGroomerCents Int @default(0)
+tipBatherCents  Int @default(0)
+```
+
+### Technical tasks
+
+#### T12.1 — Commission rules setup
+- Settings page: "Commission" section
+- Per-staff, per-service commission rules (or a global default %)
+- UI: table of staff × service with percentage input. "Default for all services" shortcut.
+- **Acceptance criteria:** Setting 45% for Jane on full grooms saves correctly. Adding a global 40% default applies to all services with no override. Rules are per-tenant.
+
+#### T12.2 — Commission calculation at checkout
+- At checkout: after payment is processed, calculate commission earned per groomer
+  - `commissionEarned = priceCents × (commissionPct / 100)`
+  - If flat rate: `commissionEarned = flatCents`
+- Store on invoice/appointment for reporting
+- **Acceptance criteria:** Completing a $80 groom with 45% commission rule → $36 commission recorded. Visible in staff payroll report.
+
+#### T12.3 — Tip capture + splitting
+- At checkout: "Add tip" field (amount or %)
+- Apply `TipSplitRule` to split between groomer and bather
+- Store split amounts on appointment
+- **Acceptance criteria:** $15 tip with 70/30 split → groomer gets $10.50, bather gets $4.50. Amounts stored on appointment record.
+
+#### T12.4 — Clock in/out
+- Staff app: prominent "Clock In" / "Clock Out" button on the Today view
+- Creates `ClockEntry` with `clockedInAt` / `clockedOutAt`
+- Admin can edit clock entries (for when staff forget to clock out)
+- **Acceptance criteria:** Staff clocks in → entry created. Clocking out closes the entry. Admin can edit. Two open entries for same user on same day shows a warning.
+
+#### T12.5 — Payroll report
+- Report page "Payroll" tab: date range selector
+- Per groomer: hours worked (from clock entries), appointments completed, services revenue, commission earned, tips received
+- Summary row: total payout per groomer for the period
+- Export to CSV
+- **Acceptance criteria:** Report for a 2-week period matches manually calculated totals. CSV exports correctly. Only shows staff within the tenant.
+
+#### T12.6 — Staff performance card
+- Each groomer's profile page shows a performance summary: avg ticket, appointments/week, top services, avg tip, total commission YTD
+- Admin-only view — individual groomers cannot see each other's stats (controlled by permissions)
+- **Acceptance criteria:** Admin sees all groomers' stats. A groomer logged in can only see their own. Stats match the payroll report for the same period.
+
+---
+
+# SPRINT 13 — Retail & Inventory
+**Duration:** 2 weeks  
+**Goal:** Grooming shops can sell shampoos, treats, accessories, and retail products at checkout alongside services. Stock is tracked automatically.
+
+### Why this sprint
+MoeGo's assessment notes that retail adds an average $12–18/visit revenue layer for shops that enable it. It's also a stickiness feature — once a shop's product catalog and stock tracking lives in Glasshound, they don't switch platforms. Many grooming shops already sell products; they're just tracking inventory in a spreadsheet or not at all.
+
+### Background & design decisions
+- Products are sold **alongside services** in a unified checkout — one invoice, one payment
+- Stock is tracked per product: current quantity, low-stock alert threshold
+- No barcode scanner required for MVP — manual quantity entry is sufficient
+- Promo codes / bundles are a stretch goal, not MVP
+- No supplier ordering integration in MVP — just stock tracking and alerts
+
+### Schema changes needed
+```prisma
+model Product {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  description   String?
+  sku           String?
+  priceCents    Int
+  costCents     Int?     // for margin reporting
+  stockQty      Int      @default(0)
+  lowStockAlert Int      @default(5)
+  active        Boolean  @default(true)
+  imageUrl      String?
+  category      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(...)
+  invoiceLines  InvoiceProductLine[]
+}
+
+model InvoiceProductLine {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  productId   String
+  name        String   // snapshot at time of sale
+  qty         Int
+  unitCents   Int
+  totalCents  Int
+  invoice     Invoice  @relation(...)
+  product     Product  @relation(...)
+}
+
+// Add to Invoice model:
+productLines  InvoiceProductLine[]
+```
+
+### Technical tasks
+
+#### T13.1 — Product catalog management
+- Settings: "Products" section — CRUD for products
+- Fields: name, SKU, price, cost (optional), stock quantity, low-stock threshold, category, photo
+- Photo upload to MinIO
+- **Acceptance criteria:** Create a product. It appears in the product list. Edit price — invoice uses updated price for new sales only (not historical). Archive (soft delete) removes from checkout but preserves sales history.
+
+#### T13.2 — Add products to checkout
+- Checkout UI: "Add product" button opens a searchable product picker
+- Each added product appears as a line item on the invoice
+- Quantity input per product
+- Invoice total updates live as products are added
+- **Acceptance criteria:** Adding 2 units of a $15 shampoo adds $30 to the invoice. Checkout charges the correct total. Product appears on the invoice PDF/receipt.
+
+#### T13.3 — Stock deduction on sale
+- When invoice is marked PAID: decrement `Product.stockQty` by the quantity sold
+- If stock would go negative: show warning (not a hard block — staff can override)
+- **Acceptance criteria:** Selling 3 units of a product with 5 in stock → stock becomes 2. Selling 6 units with 5 in stock shows a warning but allows completion.
+
+#### T13.4 — Low stock alerts
+- BullMQ job: `check_low_stock` — runs nightly per tenant
+- If any product's `stockQty <= lowStockAlert`: send email to tenant owner
+- In dashboard: products with low stock show a warning badge in the product list
+- **Acceptance criteria:** Product with stock = 4 and threshold = 5 shows warning badge. Owner receives email. Product with stock = 6 and threshold = 5 shows no warning.
+
+#### T13.5 — Stock adjustment
+- Staff (admin only) can manually adjust stock: "Receive inventory" (add qty) or "Write off" (remove qty, with reason)
+- Creates an audit log entry for every adjustment
+- **Acceptance criteria:** Adding 24 units via "Receive inventory" increments stock. AuditLog records who adjusted, when, how many, and why.
+
+#### T13.6 — Retail sales report
+- Reports tab: "Retail" section
+- Top-selling products by revenue and quantity
+- Margin per product (if cost is entered)
+- Date range filter
+- **Acceptance criteria:** Report shows correct revenue per product for the selected period. Margin column shows `(price - cost) / price × 100` where cost is entered.
+
+---
+
+# SPRINT 14 — Marketing Integrations
+**Duration:** 2 weeks  
+**Goal:** Glasshound connects to the tools grooming shops already use — Google for discovery, QuickBooks for accounting, Analytics for understanding traffic.
+
+### Why this sprint
+From the MoeGo assessment: "2 Princess Pet Grooming reported 300+ bookings in the first three months after enabling Reserve with Google." Reserve with Google puts a "Book online" button directly on the salon's Google Search and Maps listing — zero extra steps for a client who finds them on Google. This is a top-of-funnel acquisition channel that costs nothing to run. QuickBooks sync replaces manual bookkeeping. These integrations close the loop from acquisition to accounting.
+
+### Background & design decisions
+- **Reserve with Google:** requires Google Business Profile API + Google Maps Booking API. Tenant provides their Google Business Profile ID. The integration feeds availability data to Google and receives booking requests through the standard booking flow.
+- **QuickBooks:** use QuickBooks Online API (OAuth 2.0). All PAID invoices sync as sales receipts. Refunds sync as credit memos. Revenue categories map to QuickBooks chart of accounts.
+- **Google Analytics:** inject `gtag.js` on the public booking storefront (`/book/[slug]`) using the tenant's GA4 Measurement ID. Track key events: `begin_checkout`, `add_service`, `booking_completed`, `booking_abandoned`.
+- **Google Ads:** conversion tracking for bookings completed — sends a conversion event to the tenant's Google Ads account when a booking is confirmed.
+
+### Schema changes needed
+```prisma
+// Add to Tenant model:
+googleBusinessProfileId  String?
+googleAnalyticsMeasurementId String?
+googleAdsConversionId    String?
+quickbooksRealmId        String?
+quickbooksAccessToken    String?  // encrypted
+quickbooksRefreshToken   String?  // encrypted
+quickbooksTokenExpiresAt DateTime?
+reserveWithGoogleEnabled Boolean  @default(false)
+```
+
+### Technical tasks
+
+#### T14.1 — Reserve with Google
+- Tenant settings: "Reserve with Google" section — enter Google Business Profile URL/ID, enable toggle
+- Implement Google Maps Booking API feed: expose availability endpoint in the format Google expects
+- When a booking comes in via Google: create appointment with `source: 'GOOGLE_RESERVE'` and flow through standard booking request review
+- **Acceptance criteria:** After setup, a "Book online" button appears on the salon's Google Maps listing (test with a real Google Business Profile). Booking via Google creates a correctly sourced appointment.
+
+#### T14.2 — QuickBooks OAuth connection
+- Settings: "Accounting" section — "Connect QuickBooks" button → OAuth 2.0 flow → stores tokens encrypted in DB
+- Token refresh handled automatically (QuickBooks tokens expire in 1 hour, refresh tokens last 100 days)
+- Disconnect button clears tokens
+- **Acceptance criteria:** Clicking "Connect QuickBooks" redirects to QuickBooks auth, returns to Glasshound, and shows "Connected as [QuickBooks company name]."
+
+#### T14.3 — QuickBooks invoice sync
+- BullMQ job: `sync_invoice_to_quickbooks` — enqueued when `Invoice.status → PAID`
+- Creates a QuickBooks Sales Receipt with line items matching the invoice
+- Maps Glasshound service → QuickBooks income account (configurable per service category)
+- Refunds: when invoice is refunded, create a QuickBooks Credit Memo
+- **Acceptance criteria:** Marking an invoice paid → Sales Receipt appears in QuickBooks within 60 seconds. Line items match. Refund creates Credit Memo.
+
+#### T14.4 — QuickBooks sync status UI
+- In invoice detail: "Synced to QuickBooks ✓" badge with link to the QuickBooks record
+- In settings: sync log showing last 20 sync events with status (success/failed) and error detail
+- Manual "Retry sync" button for failed syncs
+- **Acceptance criteria:** Synced invoices show badge. Failed syncs show error message. Retry button re-enqueues the sync job.
+
+#### T14.5 — Google Analytics on booking storefront
+- In `src/app/book/[slug]/layout.tsx`: if `tenant.googleAnalyticsMeasurementId` is set, inject `<Script>` tag with gtag.js
+- Fire custom events:
+  - `gtag('event', 'begin_checkout')` — on service selection (step 1)
+  - `gtag('event', 'add_to_cart')` — on time slot selection (step 2)
+  - `gtag('event', 'purchase')` — on booking confirmation
+  - `gtag('event', 'booking_abandoned')` — on page unload after step 1+ without completing
+- **Acceptance criteria:** With GA4 in debug mode, all 4 events fire at the correct steps. Events appear in GA4 DebugView.
+
+#### T14.6 — Google Ads conversion tracking
+- If `tenant.googleAdsConversionId` is set: fire a conversion event on booking confirmation page
+- Use `gtag('event', 'conversion', { send_to: conversionId })` on the confirmation screen
+- **Acceptance criteria:** Completing a booking fires the conversion event. Visible in Google Ads conversion tracking with a test conversion tag.
+
+#### T14.7 — Integration settings UI
+- Settings: "Integrations" page with cards for each integration
+  - Google Analytics: input field for Measurement ID, test button
+  - Google Ads: input for Conversion ID
+  - QuickBooks: OAuth connect/disconnect, sync log
+  - Reserve with Google: enable toggle, Google Business Profile ID input, setup guide link
+- **Acceptance criteria:** Each integration card shows connected/disconnected status clearly. Disconnecting an integration stops all sync activity for that tenant.
 
 ---
 

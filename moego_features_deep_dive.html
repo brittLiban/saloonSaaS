@@ -1,0 +1,540 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.container { padding: 1.5rem 0; }
+.section { margin-bottom: 2rem; }
+.section-header {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.feature-card {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 1rem 1.1rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.feature-card:hover { border-color: var(--color-border-secondary); }
+.feature-card.active { border: 2px solid #378ADD; }
+.card-icon { font-size: 20px; color: var(--color-text-secondary); margin-bottom: 8px; }
+.card-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
+.card-desc { font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+.detail-panel {
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-lg);
+  border: 0.5px solid var(--color-border-tertiary);
+  padding: 1.5rem;
+  margin-top: 1rem;
+  display: none;
+}
+.detail-panel.visible { display: block; }
+.detail-title { font-size: 17px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 1rem; }
+.detail-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+  align-items: flex-start;
+}
+.detail-item-icon {
+  font-size: 16px;
+  color: #378ADD;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.detail-item-content {}
+.detail-item-label { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 2px; }
+.detail-item-text { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; }
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-right: 4px;
+  margin-top: 6px;
+}
+.tag-blue { background: #E6F1FB; color: #185FA5; }
+.tag-green { background: #EAF3DE; color: #3B6D11; }
+.tag-amber { background: #FAEEDA; color: #854F0B; }
+.tag-red { background: #FCEBEB; color: #A32D2D; }
+.close-btn {
+  float: right;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.ux-note {
+  background: #E6F1FB;
+  border-left: 3px solid #378ADD;
+  border-radius: 0 var(--border-radius-md) var(--border-radius-md) 0;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #185FA5;
+  margin-top: 1rem;
+  line-height: 1.6;
+}
+.mockup-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.mockup-pill {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 20px;
+  color: var(--color-text-secondary);
+}
+</style>
+
+<div class="container">
+  <div id="sections-container"></div>
+  <div id="detail-panel" class="detail-panel"></div>
+</div>
+
+<script>
+const sections = [
+  {
+    title: "Scheduling & booking",
+    features: [
+      {
+        icon: "ti-calendar-plus",
+        title: "Online booking storefront",
+        desc: "Brandable self-serve portal for clients",
+        detail: {
+          title: "Online booking storefront — full detail",
+          items: [
+            { icon: "ti-layout", label: "What it is", text: "Each business gets a hosted booking page with their logo, photos, services list, hours, and social links. It acts as both a booking portal and a mini landing page. Clients never need to call — they pick service, groomer, date, and time entirely on their own." },
+            { icon: "ti-adjustments", label: "Customization controls", text: "Owner sets: which services are visible, which staff each service is bookable with, which time slots are available, max daily appointment count, booking lead time (e.g. at least 24hr notice), and whether new vs returning clients can book online separately." },
+            { icon: "ti-shield-check", label: "Booking gates (friction by design)", text: "Before a booking confirms, you can require: card on file, fixed deposit (e.g. $25), full prepayment, or pre-authorization hold. This kills no-shows. You can also gate by breed, size, coat type — meaning certain dogs literally cannot book certain services (e.g. double-coat dogs can't book a 30-min bath)." },
+            { icon: "ti-device-mobile", label: "Mobile-first layout", text: "The storefront renders as a clean mobile page. Steps are broken into screens: pick service → pick date/time → enter pet info → payment gate → confirm. Each step is single-purpose so clients don't bail." },
+            { icon: "ti-brand-google", label: "Reserve with Google", text: "The booking page connects directly to Google Search and Maps. When someone searches your business, a 'Book online' button appears right on the Google listing, driving them into your MoeGo storefront with zero extra steps." },
+            { icon: "ti-repeat", label: "New vs. returning client flows", text: "Returning clients auto-populate their pet info, preferences, and last-visit notes. New clients get a fresh intake flow. These are separate configurable paths." }
+          ],
+          tags: [{ label: "High impact", color: "blue" }, { label: "Kills phone tag", color: "green" }],
+          uxNote: "The booking gate is the #1 no-show killer. Requiring even a $20 deposit cuts no-shows by ~80% in MoeGo case studies. Build this into your booking flow as a non-optional step for first-time clients."
+        }
+      },
+      {
+        icon: "ti-brain",
+        title: "Smart scheduling",
+        desc: "Auto-fills gaps, detects conflicts, optimizes routes",
+        detail: {
+          title: "Smart Schedule™ — full detail",
+          items: [
+            { icon: "ti-route", label: "Route optimization (mobile)", text: "For mobile groomers with vans: enter the day's appointments and the system suggests the order that minimizes total drive time. It accounts for each van's start/end location and can set different routing rules per vehicle." },
+            { icon: "ti-alert-triangle", label: "Conflict detection", text: "If two appointments overlap, or a groomer is double-booked, or a service would run past closing time, the calendar flags it immediately with a visual alert — you can't accidentally save a broken schedule." },
+            { icon: "ti-calendar-repeat", label: "Recurring appointments", text: "Set up a recurring appointment once (weekly, every 4 weeks, every 6 weeks, etc.) and it auto-creates all future slots. One click. It checks for existing conflicts on each slot before placing." },
+            { icon: "ti-clock", label: "Buffer time rules", text: "You can define prep/cleanup time between appointments. The system automatically reserves this buffer so staff can't be double-scheduled during transitions." },
+            { icon: "ti-users", label: "Multi-staff calendar view", text: "Color-coded columns per groomer. Each appointment card shows: pet name, breed, service, duration, and status icon. Hover expands to show notes, vaccine status, and payment status inline — no clicking into the record." },
+            { icon: "ti-history", label: "Schedule from history", text: "From any past appointment, one click creates the same appointment on a new date — pre-filled with the same service, groomer, and duration. Critical for repeat clients." }
+          ],
+          tags: [{ label: "Mobile essential", color: "amber" }, { label: "Multi-staff", color: "blue" }],
+          uxNote: "The recurring appointment + conflict detection combo is the scheduling time-saver. Owner-operators report going from 20+ min of manual scheduling per day to under 5 min."
+        }
+      },
+      {
+        icon: "ti-shopping-cart-off",
+        title: "Abandoned booking recovery",
+        desc: "Captures drop-offs and lets you re-engage them",
+        detail: {
+          title: "Abandoned booking recovery — full detail",
+          items: [
+            { icon: "ti-eye", label: "What it tracks", text: "Every time a client starts filling out your online booking form and doesn't finish, MoeGo logs it. You can see their name (if they entered it), the service they were looking at, and the exact step where they stopped — service selection, date picking, payment gate, etc." },
+            { icon: "ti-list", label: "Abandoned booking list", text: "A dedicated inbox view showing all incomplete booking attempts. Each row shows: client name, pet, service, drop-off step, time elapsed, and whether they've been contacted. You can filter by date range or service type." },
+            { icon: "ti-send", label: "Recovery messaging", text: "From the list, you can message individual clients or select in bulk and send a recovery text. Messages are templated ('Hey [name], we noticed you didn't finish booking — want us to hold a spot for [pet]?') but fully editable." },
+            { icon: "ti-clock-bolt", label: "Scheduled recovery texts", text: "You can set an automated recovery text to fire X hours after a booking is abandoned — no manual intervention needed. This is the automation that MoeGo users collectively used to recover $29.75M in revenue in 2024 alone." },
+            { icon: "ti-chart-bar", label: "Conversion tracking", text: "The list shows whether a previously abandoned prospect eventually booked, so you can see which recovery messages work and what drop-off step is costing you the most business." }
+          ],
+          tags: [{ label: "Revenue recovery", color: "green" }, { label: "Automation", color: "blue" }],
+          uxNote: "This is a feature most pet software completely ignores. It's essentially abandoned cart recovery (from e-commerce) applied to service bookings. Build a 'pending/incomplete requests' inbox with a timestamp and last-step indicator."
+        }
+      },
+      {
+        icon: "ti-list-check",
+        title: "Waitlist management",
+        desc: "Two-type waitlist: calendar and request-based",
+        detail: {
+          title: "Waitlist — full detail",
+          items: [
+            { icon: "ti-calendar-x", label: "Calendar waitlist", text: "When your calendar is full for a specific date, clients who try to book get added to a waitlist for that date. If a cancellation opens up, you see who's waiting and can offer the slot." },
+            { icon: "ti-inbox", label: "Request waitlist", text: "Online booking requests that you defer (instead of decline) sit in a separate 'pending requests' waitlist. You review and accept/decline on your schedule. Useful when you're not sure if you can fit someone in." },
+            { icon: "ti-bell-ringing", label: "Cancellation notifications", text: "When a slot opens, the system can automatically notify the next person on the waitlist — or you can manually choose who to offer it to based on loyalty, dog size, service type, etc." },
+            { icon: "ti-clock-2", label: "Auto-expire", text: "Booking requests on the waitlist auto-decline after a set number of hours (configurable), so you're not managing stale requests indefinitely." }
+          ],
+          tags: [{ label: "Retention tool", color: "green" }],
+          uxNote: "Don't just show 'fully booked.' Show a 'join the waitlist' option. Capturing that intent is the difference between losing a client forever and re-engaging them when a slot opens."
+        }
+      }
+    ]
+  },
+  {
+    title: "Client & pet profiles",
+    features: [
+      {
+        icon: "ti-paw",
+        title: "Pet profile with full history",
+        desc: "Breed, coat, behavior, photos, every visit logged",
+        detail: {
+          title: "Pet profile — full detail",
+          items: [
+            { icon: "ti-info-circle", label: "Core fields", text: "Pet name, species, breed, DOB/age, weight, coat type, coat length, color, spayed/neutered status, microchip number. Breed and coat type are the critical fields because they drive automatic service pricing rules." },
+            { icon: "ti-camera", label: "Pet photos", text: "Multiple photos per pet, including a designated 'profile photo' and the ability to attach before/after groom photos to each visit. The photo shows on every appointment card and in the client-facing report card." },
+            { icon: "ti-alert-circle", label: "Behavior & health notes", text: "Persistent notes per pet: allergies, medication, fears, bite history, matting tendency, sensitivity areas, preferred handling style. These notes appear automatically on every appointment for that pet — a new groomer sees everything on day one." },
+            { icon: "ti-heart-rate-monitor", label: "Visit history log", text: "Every appointment ever: date, groomer, services done, duration, amount paid, notes written, report card sent. Filterable and exportable. You can see at a glance how often a client books, what services they use, and their average ticket." },
+            { icon: "ti-star", label: "Preference tracking", text: "Per-pet grooming preferences: blade length used, specific products, drying method, nail preference. These auto-populate as defaults for future appointments so groomers don't re-ask the same questions." }
+          ],
+          tags: [{ label: "Memory layer", color: "blue" }, { label: "New groomer onboarding", color: "green" }],
+          uxNote: "The behavior notes appearing automatically on every appointment card — not buried in a profile tab — is the key design decision. A groomer shouldn't have to navigate anywhere to know a dog is bite-risk or has a heart condition."
+        }
+      },
+      {
+        icon: "ti-vaccine",
+        title: "Vaccine tracking with status icons",
+        desc: "Red/yellow/green status, expiry alerts, upload",
+        detail: {
+          title: "Vaccine tracking — full detail",
+          items: [
+            { icon: "ti-color-swatch", label: "3-state icon system", text: "Every pet card shows a syringe icon that is: green = all vaccines valid, yellow = at least one expiring within 30 days, red = at least one missing or expired. This icon appears on the calendar appointment card, in search results, on the client profile, and at the online booking step — not just inside the vaccine record." },
+            { icon: "ti-file-certificate", label: "Vaccine records", text: "Each vaccine has: name (Rabies, Bordetella, DHPP, etc.), administered date, expiration date, veterinary clinic, and an attached photo or PDF of the certificate. Clients can upload their own during online booking or intake form." },
+            { icon: "ti-settings-automation", label: "Per-service requirements", text: "You set which vaccines are required for which services. For example: Bordetella required for daycare and boarding, but not for a basic groom. If a required vaccine is missing or expired, that client cannot book that service online — the booking is blocked automatically." },
+            { icon: "ti-bell", label: "Expiry alerts", text: "30 days before a vaccine expires, the icon turns yellow and the system can auto-send a reminder to the client. On expiry day, it turns red. Staff see the alert at check-in so they can ask for updated records." },
+            { icon: "ti-clock-off", label: "Booking block", text: "If a client tries to book a vaccine-required service and their records are expired, the online booking flow stops them at that step and tells them exactly what's missing before they can proceed." }
+          ],
+          tags: [{ label: "Liability protection", color: "red" }, { label: "Automation", color: "blue" }],
+          uxNote: "The icon being visible everywhere — not just inside the vaccine tab — is the whole point. The status being surfaced at the calendar level means a staff member never accidentally admits a dog with expired Bordetella to a group daycare session."
+        }
+      },
+      {
+        icon: "ti-users-group",
+        title: "Multi-pet household",
+        desc: "One client account, unlimited pets",
+        detail: {
+          title: "Multi-pet household — full detail",
+          items: [
+            { icon: "ti-home", label: "Structure", text: "A client account (owner) holds unlimited pets. All pets share the same contact info, billing card, address, and communication preferences. When one pet books, the system auto-suggests other pets in the household for the same appointment." },
+            { icon: "ti-receipt-2", label: "Shared invoicing", text: "A single visit with multiple pets generates one invoice for the owner, line-itemized by pet and service. Payment is taken once. Tip and tax are calculated across the total." },
+            { icon: "ti-history", label: "Separate histories", text: "Each pet maintains its own independent visit history, vaccine record, behavior notes, and preferences. The shared account is billing/contact only — grooming records never bleed across pets." }
+          ],
+          tags: [{ label: "Revenue per visit", color: "green" }],
+          uxNote: "The 'suggest other pets in household' prompt during scheduling is a quiet upsell. Clients often don't think to book their second dog until prompted."
+        }
+      },
+      {
+        icon: "ti-report",
+        title: "Grooming report card",
+        desc: "Post-visit digital card with photos, notes, rebook",
+        detail: {
+          title: "Grooming report card — full detail",
+          items: [
+            { icon: "ti-photo", label: "What it contains", text: "After-groom photo (or before/after), mood rating for the visit (happy, anxious, etc.), condition notes (coat condition, skin observations, nail condition, teeth/ears if checked), specific groomer notes to the owner, and the services performed." },
+            { icon: "ti-send", label: "Delivery", text: "Sent automatically via SMS link after checkout — or triggered manually. The client taps the link and sees a branded mobile page. No app download required. Delivery takes 15–30 seconds per dog according to MoeGo groomers." },
+            { icon: "ti-calendar-plus", label: "Rebook button", text: "Embedded inside the report card is a 'Book next appointment' button that drops the client directly into the online booking flow for the same service and groomer. This is the highest-intent rebook moment — right after they see their clean, happy dog." },
+            { icon: "ti-star", label: "Review request embedded", text: "Below the report card is a review prompt. 5-star ratings automatically open a link to Google/Yelp. Lower ratings route to an internal feedback form instead of going public — protecting your rating while capturing the complaint." },
+            { icon: "ti-brand-facebook", label: "Social sharing", text: "Clients can share the report card photo directly to social media, which is free marketing for the salon." }
+          ],
+          tags: [{ label: "Marketing asset", color: "blue" }, { label: "Rebook driver", color: "green" }],
+          uxNote: "This is MoeGo's single most praised feature in reviews. It turns a back-office grooming note into a client-facing touchpoint that drives rebooks and reviews in the same moment. The design insight: the highest-intent review/rebook moment is when the owner just saw their clean dog, not 3 days later."
+        }
+      }
+    ]
+  },
+  {
+    title: "Payments & POS",
+    features: [
+      {
+        icon: "ti-credit-card",
+        title: "Card on file + pre-auth",
+        desc: "Capture card at booking with $0.50 hold to verify",
+        detail: {
+          title: "Card on file & pre-auth — full detail",
+          items: [
+            { icon: "ti-lock", label: "5 capture methods", text: "Card on file can be collected via: SMS link sent to client, embedded in the intake form, required during online booking, captured in-person at checkout, or manually entered. All methods produce a stored token — no card number ever stored directly." },
+            { icon: "ti-currency-dollar", label: "Pre-authorization hold", text: "When storing a card, MoeGo places a $0.50 temporary hold to verify the card is real and has funds. The hold releases immediately. This eliminates fake or expired cards being stored — a major source of no-show payment failure." },
+            { icon: "ti-ban", label: "No-show charge", text: "When a client no-shows or cancels late, staff can charge the card on file for the cancellation fee or full service amount in one click — no chasing, no awkward call." },
+            { icon: "ti-shield", label: "PCI compliance", text: "Cards are tokenized via Stripe. MoeGo never stores raw card data. Tokens persist indefinitely until the client removes them." }
+          ],
+          tags: [{ label: "No-show protection", color: "red" }, { label: "Non-negotiable", color: "amber" }],
+          uxNote: "The pre-auth $0.50 hold is a small but critical design detail. Without it, clients enter fake or expired cards and the salon only discovers this at the moment of a no-show charge — which then fails. The hold verification eliminates that failure mode entirely."
+        }
+      },
+      {
+        icon: "ti-cash",
+        title: "Checkout & tipping",
+        desc: "Smart tip prompts, split payment, receipts",
+        detail: {
+          title: "Checkout & tipping — full detail",
+          items: [
+            { icon: "ti-device-mobile", label: "Mobile checkout", text: "Full POS runs on iOS and Android. Tap to Pay on iPhone works with no external hardware — just tap a contactless card or phone to the iPhone screen. Alternatively: Bluetooth M2 reader (portable) or WisePOS E countertop terminal." },
+            { icon: "ti-star", label: "Smart tip prompts", text: "At checkout the screen presents preset tip amounts (15%, 20%, 25%, custom) as large tappable buttons. Research shows prompted tipping increases tip rate and amount vs. a blank field. The tip is split per groomer based on configurable rules." },
+            { icon: "ti-arrows-split", label: "Split payment", text: "A single invoice can be split across two cards, or part cash + part card. Useful for couples paying separately or clients using two cards." },
+            { icon: "ti-plus", label: "Add-on services at checkout", text: "During checkout, staff can add services that weren't on the original appointment (e.g., teeth brushing, nail grinding) — the invoice updates live and the card is charged the new total." },
+            { icon: "ti-receipt", label: "Digital receipts", text: "Receipts sent via SMS or email immediately after payment. Line-itemized by service, add-ons, taxes, tip. PDF downloadable." }
+          ],
+          tags: [{ label: "Hardware optional", color: "blue" }, { label: "Tip optimization", color: "green" }],
+          uxNote: "Preset tip buttons vs. a blank tip field typically increase tip rate by 10–15%. The specific percentages (15/20/25) anchor clients to a range where tipping is normal. Don't show a tip prompt as an afterthought — make it the prominent first action at checkout."
+        }
+      },
+      {
+        icon: "ti-percentage",
+        title: "Deposits & cancellation policy",
+        desc: "Require payment upfront, auto-charge on violation",
+        detail: {
+          title: "Deposits & cancellation policy — full detail",
+          items: [
+            { icon: "ti-coin", label: "Deposit options", text: "Fixed amount (e.g. $25) or percentage of service total (e.g. 50%). Deposit is collected during online booking, subtracted from the final invoice at checkout. Clients see this clearly at booking — no surprises." },
+            { icon: "ti-clock-off", label: "Cancellation policy", text: "Set a policy: e.g. cancel within 24 hours → forfeit deposit. Cancel within 2 hours → charge full service. Staff see the policy status on the appointment and can apply or waive the charge with one click." },
+            { icon: "ti-refresh-alert", label: "Refund rules", text: "Refunds are processed in one click from the appointment record. Partial refunds (e.g. deposit only) or full refunds both available. Refund timeline shown to client automatically." }
+          ],
+          tags: [{ label: "Cash flow", color: "green" }, { label: "No-show deterrent", color: "red" }],
+          uxNote: "Deposits change client behavior more than reminders do. A client with $0 invested in an appointment cancels at a whim. A client with $25 down will reschule instead of ghost you."
+        }
+      },
+      {
+        icon: "ti-gift",
+        title: "Packages & memberships",
+        desc: "Prepaid bundles, recurring memberships, loyalty",
+        detail: {
+          title: "Packages & memberships — full detail",
+          items: [
+            { icon: "ti-package", label: "Packages", text: "Sell prepaid bundles: e.g. '6 full grooms for the price of 5.' Client pays upfront, each session deducts from the remaining balance. Package balance shows on their profile and on every appointment card." },
+            { icon: "ti-credit-card-refund", label: "Memberships", text: "Recurring monthly billing (via card on file). Members get: discounted services, priority booking, free add-ons, or exclusive time slots. Auto-renews monthly. Cancellation managed by owner." },
+            { icon: "ti-award", label: "Loyalty mechanics", text: "Members-only perks can include: first access to holiday slots, members-only lounge/play area for daycare, free nail trim with every groom. The system tracks membership status per client and surfaces it on their profile." }
+          ],
+          tags: [{ label: "Revenue predictability", color: "blue" }, { label: "Retention", color: "green" }],
+          uxNote: "Memberships convert one-time clients into recurring revenue. Even a $29/month basic membership that includes one free nail trim creates a reason to return monthly. The key is making membership status visible to staff at every interaction."
+        }
+      }
+    ]
+  },
+  {
+    title: "Communications",
+    features: [
+      {
+        icon: "ti-message-2",
+        title: "Automated SMS/email reminders",
+        desc: "Multi-step reminder sequences per appointment",
+        detail: {
+          title: "Automated reminders — full detail",
+          items: [
+            { icon: "ti-list-tree", label: "Reminder sequence", text: "Each appointment triggers a sequence: (1) booking confirmation SMS + email, (2) day-before reminder at a custom time, (3) day-of reminder with ETA (for mobile), (4) 'your dog is ready for pickup' message, (5) 24–48hr after-visit review request. Each step is individually toggleable and templatable." },
+            { icon: "ti-template", label: "Editable templates", text: "Every message is a template with merge fields: [client first name], [pet name], [appointment date/time], [groomer name], [salon name], [service], [total price]. You write the tone, the system fills the details." },
+            { icon: "ti-phone-call", label: "Call reminders", text: "In addition to SMS and email, the system can make automated phone call reminders — a robocall that reads the appointment details. Some clients (especially older demographics) respond better to calls than texts." },
+            { icon: "ti-calendar-off", label: "Rebook reminder", text: "Separate from appointment reminders: a 'time to book again' SMS sent X weeks after the last appointment (you configure the interval, e.g. 5 weeks for a breed that needs grooming every 6 weeks). The message includes a direct booking link." },
+            { icon: "ti-user-check", label: "Opt-in/opt-out compliance", text: "All SMS includes opt-out language. The system tracks each client's SMS/email preferences and suppresses messages for opted-out clients automatically. This is legally required under TCPA." }
+          ],
+          tags: [{ label: "No-show reduction", color: "red" }, { label: "Rebook automation", color: "green" }],
+          uxNote: "The rebook reminder is underbuilt in most pet software. Sending 'it's been 6 weeks, time for [pet name]'s groom!' with a booking link one week before they'd normally be due is the highest-ROI automation in the system. Build this as a standalone automation rule, not just appointment follow-up."
+        }
+      },
+      {
+        icon: "ti-messages",
+        title: "Two-way SMS messaging",
+        desc: "Full client chat thread inside the app",
+        detail: {
+          title: "Two-way SMS — full detail",
+          items: [
+            { icon: "ti-inbox", label: "Unified message center", text: "Every client conversation lives in one inbox — threads sorted by most recent. Incoming texts from clients appear here, not on a staff member's personal phone. Keeps professional and personal separate." },
+            { icon: "ti-brand-telegram", label: "Quick replies", text: "Saved reply templates for common responses: 'We're running about 15 minutes behind,' 'Your dog is ready!,' 'We're fully booked that week, would [alternative date] work?' — send with one tap." },
+            { icon: "ti-user-pin", label: "Appointment context", text: "When you open a message thread, the sidebar shows that client's upcoming and past appointments, pet info, and vaccine status. You never need to switch screens to look up who you're talking to." },
+            { icon: "ti-speakerphone", label: "Mass text", text: "Send a single message to a filtered group of clients: e.g. 'all clients with appointments this week,' 'all clients who haven't booked in 3+ months,' 'all clients whose pet is a specific breed.' Used for weather closures, promotions, re-engagement campaigns." }
+          ],
+          tags: [{ label: "Growth tier feature", color: "amber" }, { label: "Client retention", color: "green" }],
+          uxNote: "Mass text with filters is extremely high-value for re-engagement. 'We haven't seen [pet name] in 8 weeks — is it time for their groom? Book here: [link]' sent to lapsed clients recovers a measurable % every time. The filter criteria (last appointment date, breed, service type) is what makes it surgical instead of spam."
+        }
+      },
+      {
+        icon: "ti-phone-incoming",
+        title: "Call management",
+        desc: "Branded number, voicemail, AI summaries (beta)",
+        detail: {
+          title: "Call management — full detail",
+          items: [
+            { icon: "ti-phone", label: "Branded phone number", text: "A dedicated business phone number that forwards to your real phone. Clients see your business name, not a personal number. Calls and voicemails are logged in the system alongside the client's record." },
+            { icon: "ti-mail", label: "Voicemail to text", text: "Voicemails are auto-transcribed to text and delivered as a notification in the app. Staff can read the voicemail without listening to the audio, then reply via SMS from the message center." },
+            { icon: "ti-robot", label: "AI call summaries (beta)", text: "MoeGo Calling (closed beta): calls are recorded (with consent disclosure), transcribed, and summarized by AI 1–2 minutes after the call ends. Summary includes: what the client wanted, action items, whether a booking was discussed. Staff don't need to take notes during calls." },
+            { icon: "ti-message-reply", label: "Auto-reply", text: "When you're with a dog and can't answer, an auto-reply SMS goes out: 'Hi, thanks for calling [salon name] — we're with a client right now. We'll call you back or you can book online: [link].' Captures the intent instead of losing the caller." }
+          ],
+          tags: [{ label: "Ultimate tier", color: "amber" }, { label: "AI feature", color: "blue" }],
+          uxNote: "The voicemail-to-text + auto-reply combo is the realistic near-term build target. The full AI call summarization is where the industry is heading but requires more infrastructure. Start with: branded number + auto-reply SMS with booking link."
+        }
+      },
+      {
+        icon: "ti-star-filled",
+        title: "Review booster",
+        desc: "Auto-routes 5★ to Google, lower to internal",
+        detail: {
+          title: "Review booster — full detail",
+          items: [
+            { icon: "ti-arrow-fork", label: "Rating branch logic", text: "After checkout, an automated text asks: 'How would you rate today's visit?' Response options are 1–5 stars displayed as emoji or star taps. 5-star response → immediately sends a Google/Yelp/Facebook review link. 1–4 star response → sends an internal feedback form instead." },
+            { icon: "ti-brand-google", label: "Google review deep link", text: "The Google review link opens directly to the 'write a review' input on your Google Business Profile — not just your profile page. This removes the friction of finding the review button." },
+            { icon: "ti-chart-line", label: "Review tracking", text: "Dashboard shows: total review requests sent, response rate, average rating per staff member, and review text (for internal feedback responses)." },
+            { icon: "ti-clock", label: "Timing", text: "Review request fires 2–24 hours after checkout (configurable). Sending the same day while the dog is still fresh in the owner's mind gets 3–5× higher response rates than next-day." }
+          ],
+          tags: [{ label: "SEO impact", color: "blue" }, { label: "Complaint routing", color: "red" }],
+          uxNote: "The branch logic (5★ → Google, under 5 → internal) is the critical design. Without it, a frustrated client's one-star review goes straight to Google. With it, you capture the complaint privately and have a chance to resolve it. This is not hiding negative feedback — the feedback still reaches you — it's controlling where it appears publicly."
+        }
+      }
+    ]
+  },
+  {
+    title: "Operations & staff",
+    features: [
+      {
+        icon: "ti-file-text",
+        title: "Digital intake forms",
+        desc: "Custom questions, signature, vaccine upload",
+        detail: {
+          title: "Digital intake forms — full detail",
+          items: [
+            { icon: "ti-forms", label: "Question types", text: "Short text, long text, dropdown select, radio buttons, checkboxes, and file upload (for vaccine certificate PDF/photo). You build the form to match your exact intake process." },
+            { icon: "ti-file-signature", label: "Digital service agreement", text: "Built directly into the intake form: a scrollable agreement text the client must sign (name + signature) before they can submit. Signed agreements are timestamped and stored on the client record permanently." },
+            { icon: "ti-user-plus", label: "Auto-profile creation", text: "When a new client submits the intake form, their profile and pet profile are automatically created in the system — pre-populated with everything they entered. Zero manual data entry for staff." },
+            { icon: "ti-qrcode", label: "Delivery methods", text: "Forms can be: embedded in online booking flow, sent as an SMS link, printed as a QR code for the front desk, or pushed via the message center. First-time clients can complete everything before arriving." },
+            { icon: "ti-refresh", label: "Re-sign triggers", text: "If your service agreement is updated, you can require all clients to re-sign on their next booking. The system flags which clients haven't signed the latest version." }
+          ],
+          tags: [{ label: "Liability", color: "red" }, { label: "Data capture", color: "blue" }],
+          uxNote: "The file upload question type for vaccine certificates is the detail that makes this actually work for compliance. Without it, clients say 'my vet can send them' and it never happens. With it, they upload a phone photo of the certificate during the intake flow — and it's attached to their pet's vaccine record."
+        }
+      },
+      {
+        icon: "ti-users",
+        title: "Staff roles & permissions",
+        desc: "Granular access control per staff member",
+        detail: {
+          title: "Staff permissions — full detail",
+          items: [
+            { icon: "ti-lock", label: "Permission categories", text: "Toggleable per staff: view/edit calendar, view client contact info, view client payment info, view/edit financial reports, create/delete appointments, send messages, process payments, view other groomers' schedules." },
+            { icon: "ti-calendar-user", label: "Groomer-specific calendar", text: "Each staff member can be limited to seeing only their own appointments — useful if you don't want groomers comparing their booking volume to colleagues." },
+            { icon: "ti-coin", label: "Commission rules", text: "Custom commission percentage per service per groomer. The system auto-calculates commission earned for any date range and shows it in a payroll report. Supports flat rate or percentage." },
+            { icon: "ti-clock-play", label: "Clock in/out", text: "Staff clock in/out via the app. The system logs hours and can calculate gross pay based on hours × rate + commission. Basic payroll reporting without needing a separate HR tool." }
+          ],
+          tags: [{ label: "Multi-staff essential", color: "blue" }],
+          uxNote: "The granular permission model is what lets you trust a part-time front desk employee with booking access without giving them access to financials. Without role-based permissions, you're either locking everyone out of everything or giving everyone full access — neither works as you grow."
+        }
+      },
+      {
+        icon: "ti-chart-bar",
+        title: "Business reporting",
+        desc: "Revenue, occupancy, staff performance, trends",
+        detail: {
+          title: "Business reporting — full detail",
+          items: [
+            { icon: "ti-trending-up", label: "Revenue dashboard", text: "Daily, weekly, monthly revenue totals. Breakdown by service type, groomer, and payment method. Comparison to prior period (e.g. this month vs. last month, this week vs. same week last year)." },
+            { icon: "ti-calendar-stats", label: "Occupancy rate", text: "What % of your available appointment slots were actually filled. Broken down by day of week and time of day — identifies your slow windows and peak demand for pricing or staffing decisions." },
+            { icon: "ti-user-check", label: "Staff performance", text: "Per-groomer: appointments completed, revenue generated, average ticket size, tips earned, commission owed. Shows who your highest producers are and which services each groomer specializes in." },
+            { icon: "ti-users-minus", label: "Client retention", text: "Track: new clients this month, returning clients, clients lost (no appointment in X weeks). Retention rate and lapse alerts for clients who are overdue for their typical booking interval." },
+            { icon: "ti-book-2", label: "QuickBooks sync", text: "All revenue, refunds, tips, taxes, and processing fees auto-sync to QuickBooks Online — categorized into the correct income/expense accounts. No manual bookkeeping required." }
+          ],
+          tags: [{ label: "Growth tier", color: "amber" }, { label: "Business intelligence", color: "blue" }],
+          uxNote: "Occupancy rate by day-of-week is the most actionable report most pet businesses never look at. When you see that Tuesdays at 10am are always empty and Saturdays are booked 6 weeks out, you have the data to either price Saturdays at a premium or run a Tuesday promotion."
+        }
+      },
+      {
+        icon: "ti-bell-ringing",
+        title: "Smart alerts",
+        desc: "Overcapacity, duplicates, early check-ins",
+        detail: {
+          title: "Smart alerts — full detail",
+          items: [
+            { icon: "ti-users-group", label: "Overcapacity alert", text: "Triggers if your boarding, daycare, or grooming capacity for a given day exceeds the limit you've set. Shows current count vs. max — prevents accidentally accepting more than you can handle." },
+            { icon: "ti-copy", label: "Duplicate booking alert", text: "If the same client/pet is somehow booked twice on the same day, the system flags it before checkout. Prevents billing errors and scheduling confusion." },
+            { icon: "ti-clock-bolt", label: "Early check-in alert", text: "If a client arrives significantly before their appointment, staff get an alert so they can decide whether to take the dog early or ask them to wait. For mobile, this helps coordinate when a client is at the van's location before the scheduled stop." },
+            { icon: "ti-dog", label: "Behavioral flag alerts", text: "If a pet's profile includes a behavior note (bite history, severe anxiety), a prominent alert fires at check-in — separate from the normal note display — so staff can't miss it." }
+          ],
+          tags: [{ label: "Safety", color: "red" }, { label: "May 2025 launch", color: "blue" }],
+          uxNote: "Alerts that require acknowledgment (rather than just appearing passively) are more effective. If an overcapacity warning can be scrolled past, it will be. Force a confirmation click before proceeding."
+        }
+      }
+    ]
+  }
+];
+
+let activeCard = null;
+
+function build() {
+  const container = document.getElementById('sections-container');
+  sections.forEach((section, si) => {
+    const secDiv = document.createElement('div');
+    secDiv.className = 'section';
+    secDiv.innerHTML = `<div class="section-header">${section.title}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'feature-grid';
+    section.features.forEach((feat, fi) => {
+      const card = document.createElement('div');
+      card.className = 'feature-card';
+      card.id = `card-${si}-${fi}`;
+      card.innerHTML = `
+        <div class="card-icon"><i class="ti ${feat.icon}" aria-hidden="true"></i></div>
+        <div class="card-title">${feat.title}</div>
+        <div class="card-desc">${feat.desc}</div>
+      `;
+      card.addEventListener('click', () => toggleDetail(feat, card));
+      grid.appendChild(card);
+    });
+    secDiv.appendChild(grid);
+    container.appendChild(secDiv);
+  });
+}
+
+function toggleDetail(feat, card) {
+  const panel = document.getElementById('detail-panel');
+  if (activeCard === card) {
+    panel.classList.remove('visible');
+    card.classList.remove('active');
+    activeCard = null;
+    return;
+  }
+  if (activeCard) activeCard.classList.remove('active');
+  activeCard = card;
+  card.classList.add('active');
+
+  const d = feat.detail;
+  const itemsHtml = d.items.map(item => `
+    <div class="detail-item">
+      <div class="detail-item-icon"><i class="ti ${item.icon}" aria-hidden="true"></i></div>
+      <div class="detail-item-content">
+        <div class="detail-item-label">${item.label}</div>
+        <div class="detail-item-text">${item.text}</div>
+      </div>
+    </div>
+  `).join('');
+  const tagsHtml = d.tags.map(t => `<span class="tag tag-${t.color}">${t.label}</span>`).join('');
+  panel.innerHTML = `
+    <button class="close-btn" onclick="closePanel()">close ×</button>
+    <div class="detail-title">${d.title}</div>
+    ${itemsHtml}
+    ${tagsHtml}
+    <div class="uxNote" style="background:#E6F1FB;border-left:3px solid #378ADD;border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:#185FA5;margin-top:1rem;line-height:1.6;">
+      <strong>Build note:</strong> ${d.uxNote}
+    </div>
+  `;
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closePanel() {
+  const panel = document.getElementById('detail-panel');
+  panel.classList.remove('visible');
+  if (activeCard) { activeCard.classList.remove('active'); activeCard = null; }
+}
+
+build();
+</script>
