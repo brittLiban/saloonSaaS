@@ -80,6 +80,7 @@ model Tenant {
   apiKeys         ApiKey[]
   webhookEndpoints WebhookEndpoint[]
   auditLogs       AuditLog[]
+  savedCards      SavedCard[]
 }
 
 model User {
@@ -108,21 +109,23 @@ model Membership {
 }
 
 model Client {
-  id          String       @id @default(cuid())
-  tenantId    String
-  name        String
-  phone       String?
-  email       String?
-  address     String?
-  tier        String       @default("Regular")
-  notes       String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  animals     Animal[]
-  appointments Appointment[]
-  notesFeed   GroomingNote[]
-  invoices    Invoice[]
+  id               String       @id @default(cuid())
+  tenantId         String
+  name             String
+  phone            String?
+  email            String?
+  address          String?
+  tier             String       @default("Regular")
+  notes            String?
+  stripeCustomerId String?      @unique
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  animals          Animal[]
+  appointments     Appointment[]
+  notesFeed        GroomingNote[]
+  invoices         Invoice[]
+  savedCards       SavedCard[]
 
   @@index([tenantId, name])
   @@index([tenantId, phone])
@@ -311,30 +314,33 @@ model GroomingNote {
 }
 
 model Invoice {
-  id           String        @id @default(cuid())
-  tenantId     String
-  clientId     String
-  animalId     String?
-  appointmentId String?
-  number       String
-  status       InvoiceStatus @default(DRAFT)
-  lineItems    Json
-  subtotalCents Int
-  taxCents     Int           @default(0)
-  totalCents   Int
-  externalPaymentRef String?
-  issuedAt     DateTime?
-  dueAt        DateTime?
-  paidAt       DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  client       Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  animal       Animal?       @relation(fields: [animalId], references: [id], onDelete: SetNull)
-  appointment  Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  id                    String        @id @default(cuid())
+  tenantId              String
+  clientId              String
+  animalId              String?
+  appointmentId         String?
+  number                String
+  status                InvoiceStatus @default(DRAFT)
+  lineItems             Json
+  subtotalCents         Int
+  taxCents              Int           @default(0)
+  totalCents            Int
+  externalPaymentRef    String?
+  stripePaymentIntentId String?
+  stripeReceiptUrl      String?
+  issuedAt              DateTime?
+  dueAt                 DateTime?
+  paidAt                DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  tenant                Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client                Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  animal                Animal?       @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  appointment           Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, number])
   @@index([tenantId, status])
+  @@index([stripePaymentIntentId])
 }
 
 model ApiKey {
@@ -385,6 +391,23 @@ model WebhookDelivery {
 
   @@index([endpointId, status])
   @@index([nextAttemptAt])
+}
+
+model SavedCard {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  clientId              String
+  stripePaymentMethodId String   @unique
+  last4                 String
+  brand                 String
+  expMonth              Int
+  expYear               Int
+  isDefault             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client                Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, clientId])
 }
 
 model AuditLog {

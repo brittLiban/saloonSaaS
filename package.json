@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "@stripe/react-stripe-js": "^6.4.0",
+    "@stripe/stripe-js": "^9.6.0",
     "bcryptjs": "3.0.3",
     "bullmq": "5.65.1",
     "date-fns": "^4.1.0",
@@ -27,6 +29,7 @@
     "next": "16.2.6",
     "react": "19.2.6",
     "react-dom": "19.2.6",
+    "stripe": "^22.1.1",
     "zod": "4.2.1"
   },
   "devDependencies": {

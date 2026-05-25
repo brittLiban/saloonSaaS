@@ -3,8 +3,16 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createInvoice, sendInvoice, markInvoicePaid, voidInvoice } from "@/server/actions/invoices";
+import {
+  createInvoice,
+  sendInvoice,
+  voidInvoice,
+  chargeInvoice,
+  markInvoicePaidManual,
+} from "@/server/actions/invoices";
 import { WeeklyRevenueChart } from "@/components/WeeklyRevenueChart";
+
+type DefaultCard = { id: string; last4: string; brand: string };
 
 type InvoiceRow = {
   id: string;
@@ -14,7 +22,9 @@ type InvoiceRow = {
   issuedAt: Date | null;
   dueAt: Date | null;
   clientId: string;
-  client: { name: string };
+  stripePaymentIntentId: string | null;
+  stripeReceiptUrl: string | null;
+  client: { name: string; savedCards: DefaultCard[] };
   animal: { name: string } | null;
 };
 
@@ -76,6 +86,7 @@ export function MoneyClient({
 }) {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<StatusKey>("ALL");
+  const [chargeTarget, setChargeTarget] = useState<InvoiceRow | null>(null);
   const now = new Date();
 
   const filtered = useMemo(() => {
@@ -257,6 +268,13 @@ export function MoneyClient({
                       </td>
                       <td style={{ padding: "13px 16px", fontSize: 14, fontFamily: "var(--dash-mono)", fontWeight: 700, whiteSpace: "nowrap" }}>
                         {fmtMoney(inv.totalCents)}
+                        {inv.stripeReceiptUrl && (
+                          <a href={inv.stripeReceiptUrl} target="_blank" rel="noopener noreferrer"
+                            style={{ marginLeft: 6, fontSize: 10, color: "var(--d-ink-4)" }}
+                            title="View Stripe receipt">
+                            🧾
+                          </a>
+                        )}
                       </td>
                       <td style={{ padding: "13px 16px" }}>
                         <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: style.bg, color: style.color, border: `1px solid ${style.border}`, whiteSpace: "nowrap" }}>
@@ -271,7 +289,10 @@ export function MoneyClient({
                         {isOverdue && <span style={{ marginLeft: 4 }}>!</span>}
                       </td>
                       <td style={{ padding: "13px 16px" }}>
-                        <InvoiceActions invoice={inv} />
+                        <InvoiceActions
+                          invoice={inv}
+                          onChargeCard={() => setChargeTarget(inv)}
+                        />
                       </td>
                     </tr>
                   );
@@ -283,44 +304,304 @@ export function MoneyClient({
       </div>
 
       {showModal && <NewInvoiceModal clients={clients} onClose={() => setShowModal(false)} />}
+
+      {chargeTarget && (
+        <ChargeCardModal
+          invoice={chargeTarget}
+          onClose={() => setChargeTarget(null)}
+        />
+      )}
     </>
   );
 }
 
-function InvoiceActions({ invoice }: { invoice: InvoiceRow }) {
+// ─── Invoice action buttons ───────────────────────────────────────────────────
+
+function InvoiceActions({
+  invoice,
+  onChargeCard,
+}: {
+  invoice: InvoiceRow;
+  onChargeCard: () => void;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [showCashModal, setShowCashModal] = useState(false);
 
   function act(fn: () => Promise<void>) {
     startTransition(async () => { await fn(); router.refresh(); });
   }
 
-  const canSend = invoice.status === "DRAFT";
-  const canPay  = ["SENT", "UNPAID", "OVERDUE"].includes(invoice.status);
-  const canVoid = !["VOID", "PAID"].includes(invoice.status);
+  const canSend    = invoice.status === "DRAFT";
+  const canCharge  = ["DRAFT", "SENT", "UNPAID"].includes(invoice.status) && invoice.client.savedCards.length > 0;
+  const canPayCash = ["DRAFT", "SENT", "UNPAID"].includes(invoice.status);
+  const canVoid    = !["VOID", "PAID"].includes(invoice.status);
 
-  if (!canSend && !canPay && !canVoid) return null;
+  if (!canSend && !canCharge && !canPayCash && !canVoid) return null;
 
   return (
-    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-      {canSend && (
-        <button className="d-btn" style={{ fontSize: 11, padding: "4px 10px" }} disabled={isPending} onClick={() => act(() => sendInvoice(invoice.id))}>
-          {isPending ? "…" : "Send"}
-        </button>
+    <>
+      <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
+        {canSend && (
+          <button className="d-btn" style={{ fontSize: 11, padding: "4px 10px" }} disabled={isPending}
+            onClick={() => act(() => sendInvoice(invoice.id))}>
+            {isPending ? "…" : "Send"}
+          </button>
+        )}
+        {canCharge && (
+          <button
+            className="d-btn d-btn-primary"
+            style={{ fontSize: 11, padding: "4px 10px" }}
+            disabled={isPending}
+            onClick={onChargeCard}
+          >
+            Charge card
+          </button>
+        )}
+        {canPayCash && (
+          <button
+            className="d-btn"
+            style={{ fontSize: 11, padding: "4px 10px" }}
+            disabled={isPending}
+            onClick={() => setShowCashModal(true)}
+          >
+            Cash
+          </button>
+        )}
+        {canVoid && (
+          <button className="d-btn" style={{ fontSize: 11, padding: "4px 10px", color: "var(--d-ink-4)" }} disabled={isPending}
+            onClick={() => act(() => voidInvoice(invoice.id))}>
+            Void
+          </button>
+        )}
+      </div>
+
+      {showCashModal && (
+        <CashPaymentModal
+          invoiceId={invoice.id}
+          totalCents={invoice.totalCents}
+          onClose={() => setShowCashModal(false)}
+        />
       )}
-      {canPay && (
-        <button className="d-btn d-btn-primary" style={{ fontSize: 11, padding: "4px 10px" }} disabled={isPending} onClick={() => act(() => markInvoicePaid(invoice.id))}>
-          {isPending ? "…" : "Mark paid"}
-        </button>
-      )}
-      {canVoid && (
-        <button className="d-btn" style={{ fontSize: 11, padding: "4px 10px", color: "var(--d-ink-4)" }} disabled={isPending} onClick={() => act(() => voidInvoice(invoice.id))}>
-          Void
-        </button>
-      )}
+    </>
+  );
+}
+
+// ─── Charge card modal ────────────────────────────────────────────────────────
+
+function ChargeCardModal({
+  invoice,
+  onClose,
+}: {
+  invoice: InvoiceRow;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<{ receiptUrl: string | null } | null>(null);
+
+  const defaultCard = invoice.client.savedCards[0];
+  if (!defaultCard) return null;
+
+  function handleCharge() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await chargeInvoice(invoice.id, defaultCard.id);
+        setSuccess(result);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Charge failed");
+      }
+    });
+  }
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(15,15,20,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        className="glass-card"
+        style={{ width: "100%", maxWidth: 420, padding: "28px 32px", borderRadius: 20 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontFamily: "var(--dash-serif)", fontSize: 20 }}>Charge card on file</div>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--d-line)", border: "none", cursor: "pointer", fontSize: 18, color: "var(--d-ink-3)", display: "flex", alignItems: "center", justifyContent: "center" }}>&times;</button>
+        </div>
+
+        {success ? (
+          <div>
+            <div style={{ textAlign: "center", padding: "16px 0", fontSize: 40, marginBottom: 12 }}>✅</div>
+            <div style={{ textAlign: "center", fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
+              Payment successful!
+            </div>
+            <div style={{ textAlign: "center", fontSize: 13, color: "var(--d-ink-3)", marginBottom: 20 }}>
+              Invoice #{invoice.number} marked as paid.
+            </div>
+            {success.receiptUrl && (
+              <div style={{ textAlign: "center", marginBottom: 16 }}>
+                <a
+                  href={success.receiptUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 13, color: "var(--oxblood)", fontWeight: 600 }}
+                >
+                  View Stripe receipt →
+                </a>
+              </div>
+            )}
+            <button className="d-btn d-btn-primary" style={{ width: "100%" }} onClick={onClose}>
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ padding: "14px 16px", background: "#fafafa", borderRadius: 12, border: "1px solid var(--d-line-2)", marginBottom: 20 }}>
+              <div style={{ fontSize: 12, color: "var(--d-ink-3)", marginBottom: 4 }}>Charging</div>
+              <div style={{ fontSize: 22, fontFamily: "var(--dash-serif)", fontWeight: 400, marginBottom: 6 }}>
+                {fmtMoney(invoice.totalCents)}
+              </div>
+              <div style={{ fontSize: 13, color: "var(--d-ink-2)" }}>
+                Invoice #{invoice.number} · {invoice.client.name}
+              </div>
+            </div>
+
+            <div style={{ padding: "12px 14px", background: "oklch(from var(--oxblood) l c h / 0.04)", borderRadius: 12, border: "1px solid oklch(from var(--oxblood) l c h / 0.15)", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 20 }}>💳</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>
+                  {capitalize(defaultCard.brand)} •••• {defaultCard.last4}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--d-ink-3)" }}>Default card on file</div>
+              </div>
+            </div>
+
+            {error && (
+              <div style={{ padding: "10px 14px", background: "oklch(from var(--oxblood) l c h / 0.08)", borderRadius: 8, color: "var(--oxblood)", fontSize: 13, marginBottom: 14 }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="d-btn" style={{ flex: 1 }} onClick={onClose} disabled={isPending}>
+                Cancel
+              </button>
+              <button className="d-btn d-btn-primary" style={{ flex: 1 }} onClick={handleCharge} disabled={isPending}>
+                {isPending ? "Charging…" : `Charge ${fmtMoney(invoice.totalCents)}`}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
+
+// ─── Cash payment modal ───────────────────────────────────────────────────────
+
+function CashPaymentModal({
+  invoiceId,
+  totalCents,
+  onClose,
+}: {
+  invoiceId: string;
+  totalCents: number;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [method, setMethod] = useState<"cash" | "check" | "external">("cash");
+  const [reference, setReference] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function handleSubmit() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await markInvoicePaidManual(invoiceId, method, reference || undefined);
+        router.refresh();
+        onClose();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to mark paid");
+      }
+    });
+  }
+
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 2100, background: "rgba(15,15,20,0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={onClose}
+    >
+      <div
+        className="glass-card"
+        style={{ width: "100%", maxWidth: 380, padding: "24px 28px", borderRadius: 20 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ fontFamily: "var(--dash-serif)", fontSize: 18, marginBottom: 16 }}>
+          Mark as paid — {fmtMoney(totalCents)}
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--d-ink-2)", marginBottom: 8 }}>Payment method</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["cash", "check", "external"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMethod(m)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: method === m ? 700 : 500,
+                  border: method === m ? "1.5px solid var(--oxblood)" : "1.5px solid var(--d-line-2)",
+                  background: method === m ? "oklch(from var(--oxblood) l c h / 0.08)" : "#fff",
+                  color: method === m ? "var(--oxblood)" : "var(--d-ink-2)",
+                  cursor: "pointer",
+                  textTransform: "capitalize",
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(method === "check" || method === "external") && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginBottom: 4, color: "var(--d-ink-2)" }}>
+              Reference (optional)
+            </label>
+            <input
+              className="d-input"
+              style={{ width: "100%" }}
+              placeholder={method === "check" ? "Check #1234" : "Transaction ID"}
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+            />
+          </div>
+        )}
+
+        {error && (
+          <div style={{ padding: "10px 14px", background: "oklch(from var(--oxblood) l c h / 0.08)", borderRadius: 8, color: "var(--oxblood)", fontSize: 13, marginBottom: 14 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="d-btn" style={{ flex: 1 }} onClick={onClose} disabled={isPending}>Cancel</button>
+          <button className="d-btn d-btn-primary" style={{ flex: 1 }} onClick={handleSubmit} disabled={isPending}>
+            {isPending ? "Saving…" : "Mark paid"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── New invoice modal ────────────────────────────────────────────────────────
 
 type LineItem = { description: string; quantity: string; unitPrice: string };
 
@@ -466,4 +747,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

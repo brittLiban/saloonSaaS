@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
 import { ClientDetailActions } from "@/components/ClientDetailActions";
+import { CardOnFileSection } from "@/components/CardOnFileSection";
 
 function petEmoji(species: string) {
   const s = species.toLowerCase();
@@ -56,6 +57,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
       invoices: {
         orderBy: { createdAt: "desc" },
         take: 20,
+      },
+      savedCards: {
+        orderBy: { createdAt: "asc" },
       },
     },
   });
@@ -239,6 +243,11 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Cards on file ── */}
+        <div style={{ marginBottom: 16 }}>
+          <CardOnFileSection clientId={client.id} cards={client.savedCards} />
         </div>
 
         {/* ── Notes (full width) ── */}

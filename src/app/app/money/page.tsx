@@ -35,7 +35,16 @@ export default async function MoneyPage() {
     db.invoice.findMany({
       where: { tenantId: ctx.tenantId },
       include: {
-        client: { select: { name: true } },
+        client: {
+          select: {
+            name: true,
+            savedCards: {
+              where: { isDefault: true },
+              select: { id: true, last4: true, brand: true },
+              take: 1,
+            },
+          },
+        },
         animal: { select: { name: true } },
       },
       orderBy: { createdAt: "desc" },

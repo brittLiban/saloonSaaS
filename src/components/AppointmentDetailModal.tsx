@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { updateAppointmentStatus } from "@/server/actions/appointments";
+import { chargeNoShow } from "@/server/actions/invoices";
 import { RescheduleModal } from "@/components/RescheduleModal";
 import { appointmentDurationMinutes, appointmentServiceLabel } from "@/lib/appointment-summary";
 
@@ -55,7 +56,7 @@ interface AppointmentDetailProps {
     endsAt: string | Date;
     status: AppointmentDetailStatus;
     priceCents: number;
-    client: { id: string; name: string; phone: string | null };
+    client: { id: string; name: string; phone: string | null; hasCardOnFile?: boolean };
     animal: {
       id: string;
       name: string;
@@ -109,6 +110,10 @@ export function AppointmentDetailModal({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [showReschedule, setShowReschedule] = useState(false);
+  const [showNoShowCharge, setShowNoShowCharge] = useState(false);
+  const [noShowAmount, setNoShowAmount] = useState(
+    (appointment.priceCents / 100).toFixed(2),
+  );
   const nextActions = getNextActions(appointment.status);
   const statusColor = getStatusColor(appointment.status);
   const serviceLabel = appointmentServiceLabel(appointment);
@@ -410,6 +415,87 @@ export function AppointmentDetailModal({
               </>
             )}
           </div>
+
+          {/* No-show charge — only show if client has a card and appt is not completed */}
+          {appointment.client.hasCardOnFile &&
+            !["COMPLETED", "NO_SHOW"].includes(appointment.status) && (
+              <>
+                {!showNoShowCharge ? (
+                  <button
+                    className="d-btn"
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      background: "#fef3c7",
+                      borderColor: "#fcd34d",
+                      color: "#78350f",
+                    }}
+                    disabled={isPending}
+                    onClick={() => setShowNoShowCharge(true)}
+                  >
+                    💳 Charge no-show fee
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: "#fef3c7",
+                      borderRadius: 10,
+                      border: "1px solid #fcd34d",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#78350f", marginBottom: 8 }}>
+                      No-show charge amount
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <div style={{ position: "relative", flex: 1 }}>
+                        <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--d-ink-3)", fontSize: 13 }}>$</span>
+                        <input
+                          className="d-input"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={noShowAmount}
+                          onChange={(e) => setNoShowAmount(e.target.value)}
+                          style={{ paddingLeft: 24, width: "100%" }}
+                        />
+                      </div>
+                      <button
+                        className="d-btn"
+                        style={{ padding: "8px 12px", fontSize: 12, fontWeight: 600, background: "#dc2626", borderColor: "#dc2626", color: "#fff" }}
+                        disabled={isPending}
+                        onClick={() => {
+                          const cents = Math.round(parseFloat(noShowAmount) * 100);
+                          if (!cents || cents <= 0) return;
+                          setError(null);
+                          startTransition(async () => {
+                            try {
+                              await chargeNoShow(appointment.id, cents);
+                              onClose();
+                            } catch (e: unknown) {
+                              setError(e instanceof Error ? e.message : "Charge failed");
+                              setShowNoShowCharge(false);
+                            }
+                          });
+                        }}
+                      >
+                        {isPending ? "…" : "Charge"}
+                      </button>
+                      <button
+                        className="d-btn"
+                        style={{ padding: "8px 10px", fontSize: 12 }}
+                        disabled={isPending}
+                        onClick={() => setShowNoShowCharge(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
           {error && (
             <div style={{ fontSize: 12, color: "var(--acc)", marginTop: 4, padding: "6px 8px", background: "rgba(0,0,0,0.05)", borderRadius: 4 }}>{error}</div>

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireTenantCtx } from "@/lib/tenant";
 import { db } from "@/server/db";
+import { stripe } from "@/lib/stripe";
 
 const UpsertSchema = z.object({
   id: z.string().cuid().optional(),
@@ -29,9 +30,31 @@ export async function upsertClient(raw: unknown) {
   };
 
   if (id) {
+    // Update existing client
     await db.client.updateMany({ where: { id, tenantId: ctx.tenantId }, data: clean });
   } else {
-    await db.client.create({ data: { ...clean, tenantId: ctx.tenantId } });
+    // Create new client
+    const client = await db.client.create({
+      data: { ...clean, tenantId: ctx.tenantId },
+    });
+
+    // Create Stripe Customer (best-effort — never blocks client creation)
+    if (stripe) {
+      try {
+        const customer = await stripe.customers.create({
+          name: clean.name,
+          email: clean.email ?? undefined,
+          phone: clean.phone ?? undefined,
+          metadata: { tenantId: ctx.tenantId, clientId: client.id },
+        });
+        await db.client.update({
+          where: { id: client.id },
+          data: { stripeCustomerId: customer.id },
+        });
+      } catch (err) {
+        console.error("[stripe] Failed to create customer for new client", client.id, err);
+      }
+    }
   }
 
   revalidatePath("/app/clients");

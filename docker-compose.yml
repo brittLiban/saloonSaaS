@@ -96,6 +96,8 @@ services:
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-glasshound}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-glasshound_dev_password}
       SESSION_SECRET: ${SESSION_SECRET:-replace-me-in-production}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health | grep -q healthy"]
       interval: 15s
